@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/confetti.ts","./src/dateUtils.ts","./src/emojiOptions.ts","./src/main.tsx","./src/useBodyScrollLock.ts","./src/useConfirm.ts","./src/useEscapeToClose.ts","./src/useReveal.ts","./src/vite-env.d.ts","./src/components/DragItem.tsx","./src/components/EmojiPicker.tsx","./src/components/Modal.tsx","./src/components/StarRating.tsx"],"version":"6.0.3"}
