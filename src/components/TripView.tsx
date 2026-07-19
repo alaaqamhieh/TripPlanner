@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ToastFn, UpdateTrip } from '../App'
 import { dayLabel, daysBetween, todayIso } from '../dateUtils'
 import { burstFromElement } from '../confetti'
@@ -8,6 +8,7 @@ import AddToDayModal from './AddToDayModal'
 import ItemModal from './ItemModal'
 import Itinerary from './Itinerary'
 import Recommendations from './Recommendations'
+import TripMap from './TripMap'
 import TripSettingsModal from './TripSettingsModal'
 
 // The per-trip screen: hero + sticky nav + itinerary + recommendations
@@ -31,7 +32,6 @@ export default function TripView({
   onRetake,
   onDelete,
   showToast,
-  extraSections,
   onShare,
   onExport,
   onFindPlaces,
@@ -47,8 +47,6 @@ export default function TripView({
   onRetake: () => void
   onDelete: () => void
   showToast: ToastFn
-  /** Map & other sections injected once available (keeps this file focused). */
-  extraSections?: ReactNode
   onShare?: () => void
   onExport?: () => void
   onFindPlaces?: () => void
@@ -212,7 +210,12 @@ export default function TripView({
           placesAvailable={placesAvailable ?? false}
         />
 
-        {extraSections}
+        <TripMap
+          trip={trip}
+          showToast={showToast}
+          onImport={(rec) => updateTrip((prev) => ({ ...prev, pool: [...prev.pool, rec] }))}
+          onPlan={(recId) => setModal({ kind: 'addToDay', recId })}
+        />
       </main>
 
       <footer>

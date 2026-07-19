@@ -49,7 +49,7 @@ export function loadTrip(id: string): TripState | null {
     return {
       version: TRIP_VERSION,
       meta: parsed.meta,
-      profile: { ...defaultProfile(), ...(parsed.profile ?? {}) },
+      profile: { ...defaultProfile(), ...parsed.profile },
       pool: Array.isArray(parsed.pool) ? parsed.pool : [],
       dismissed: Array.isArray(parsed.dismissed) ? parsed.dismissed : [],
       scheduled: Array.isArray(parsed.scheduled) ? parsed.scheduled : [],

@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { findLivePlaces } from './engine/liveQueries'
+import { downloadICS } from './ics'
+import { placesAvailable } from './placeSearch'
+import { decodeTrip, shareUrl, tripFromLocation } from './shareTrip'
 import { loadIndex, loadTrip, saveIndex, saveTrip, deleteTrip as removeTrip } from './storage'
-import type { Screen, Theme, TripState, TripsIndex } from './types'
+import { deviceId, fetchShared, isSyncOn, pushShared } from './sync'
+import type { RecommendationItem, Screen, Theme, TripState, TripsIndex } from './types'
 import HomeScreen from './components/HomeScreen'
 import Questionnaire from './components/Questionnaire'
 import TripView from './components/TripView'
@@ -35,8 +40,11 @@ export default function App() {
   })
   const [toast, setToast] = useState<string | null>(null)
   const [savedFlash, setSavedFlash] = useState(false)
+  const [findingPlaces, setFindingPlaces] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editedRef = useRef(false)
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ---- persistence pipeline -------------------------------------------------
   useEffect(() => saveIndex(index), [index])
@@ -53,9 +61,15 @@ export default function App() {
       if (!prev) return prev
       const next = mutator(prev)
       saveTrip(next)
+      editedRef.current = true
       setSavedFlash(true)
       if (savedTimer.current) clearTimeout(savedTimer.current)
       savedTimer.current = setTimeout(() => setSavedFlash(false), 1800)
+      // Debounced cloud push — a no-op unless a sync DB is configured.
+      if (isSyncOn()) {
+        if (pushTimer.current) clearTimeout(pushTimer.current)
+        pushTimer.current = setTimeout(() => void pushShared(next), 1200)
+      }
       return next
     })
   }, [])
@@ -92,10 +106,118 @@ export default function App() {
     setIndex((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
   }, [])
 
+  // ---- share-link import ----------------------------------------------------
+  // A #trip=<encoded> hash carries a whole trip from another device.
+  useEffect(() => {
+    const encoded = tripFromLocation()
+    if (!encoded) return
+    void decodeTrip(encoded).then((shared) => {
+      window.history.replaceState(null, '', '#/')
+      if (!shared) {
+        showToast('That trip link could not be read')
+        return
+      }
+      const exists = loadTrip(shared.meta.id)
+      const ok = window.confirm(
+        exists
+          ? `Update "${shared.meta.name}" on this device with the shared version?`
+          : `Import the trip "${shared.meta.name}" (${shared.meta.destination || 'no destination'}) to this device?`,
+      )
+      if (!ok) return
+      saveTrip(shared)
+      setIndex((prev) =>
+        prev.tripIds.includes(shared.meta.id) ? prev : { ...prev, tripIds: [...prev.tripIds, shared.meta.id] },
+      )
+      setScreen({ mode: 'trip', tripId: shared.meta.id })
+      setTrip(shared)
+      window.history.replaceState(null, '', `#/trip/${shared.meta.id}`)
+      showToast(`${shared.meta.emoji} Trip imported ✓`)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ---- optional cloud sync (adopt on open + gentle poll) --------------------
+  const openTripId = trip?.meta.id ?? null
+  useEffect(() => {
+    if (!openTripId || !isSyncOn()) return
+    editedRef.current = false
+    let cancelled = false
+    let lastRemote = 0
+
+    const adopt = (shared: TripState & { _meta?: { deviceId: string; updatedAt: number } }) => {
+      const { _meta, ...clean } = shared
+      void _meta
+      saveTrip(clean)
+      setTrip(clean)
+    }
+
+    void fetchShared(openTripId).then((shared) => {
+      if (cancelled || !shared?._meta) return
+      // Local paints instantly; the shared copy takes over unless this device
+      // already edited since opening (their edit would win the next push).
+      if (shared._meta.deviceId !== deviceId() && !editedRef.current) {
+        lastRemote = shared._meta.updatedAt
+        adopt(shared)
+      }
+    })
+
+    const poll = setInterval(() => {
+      void fetchShared(openTripId).then((shared) => {
+        if (cancelled || !shared?._meta) return
+        if (shared._meta.deviceId !== deviceId() && shared._meta.updatedAt > lastRemote) {
+          lastRemote = shared._meta.updatedAt
+          adopt(shared)
+        }
+      })
+    }, 10000)
+
+    return () => {
+      cancelled = true
+      clearInterval(poll)
+    }
+  }, [openTripId])
+
+  // ---- per-trip actions (share, export, live places) ------------------------
+  const handleShare = useCallback(() => {
+    if (!trip) return
+    void shareUrl(trip).then((url) => {
+      void navigator.clipboard
+        .writeText(url)
+        .then(() => showToast('🔗 Trip link copied — open it anywhere to import'))
+        .catch(() => window.prompt('Copy your trip link:', url))
+    })
+  }, [trip, showToast])
+
+  const handleExport = useCallback(() => {
+    if (!trip) return
+    downloadICS(trip)
+    showToast('📅 Calendar file downloaded')
+  }, [trip, showToast])
+
+  const handleFindPlaces = useCallback(() => {
+    if (!trip || findingPlaces) return
+    if (!trip.meta.destination) {
+      showToast('Set a destination in trip settings first')
+      return
+    }
+    setFindingPlaces(true)
+    void findLivePlaces(trip.profile, trip.meta.destination, trip.pool)
+      .then((found: RecommendationItem[]) => {
+        if (!found.length) {
+          showToast('No new places found — try the map search below')
+          return
+        }
+        updateTrip((prev) => ({ ...prev, pool: [...prev.pool, ...found] }))
+        showToast(`✨ Added ${found.length} real place${found.length === 1 ? '' : 's'} for you`)
+      })
+      .finally(() => setFindingPlaces(false))
+  }, [trip, findingPlaces, showToast, updateTrip])
+
   // ---- trip lifecycle -------------------------------------------------------
   const adoptTrip = useCallback(
     (newTrip: TripState) => {
       saveTrip(newTrip)
+      if (isSyncOn()) void pushShared(newTrip)
       setIndex((prev) =>
         prev.tripIds.includes(newTrip.meta.id) ? prev : { ...prev, tripIds: [...prev.tripIds, newTrip.meta.id] },
       )
@@ -138,6 +260,11 @@ export default function App() {
           navigate({ mode: 'home' })
         }}
         showToast={showToast}
+        onShare={handleShare}
+        onExport={handleExport}
+        onFindPlaces={handleFindPlaces}
+        findingPlaces={findingPlaces}
+        placesAvailable={placesAvailable()}
       />
     )
   } else if (screen.mode === 'trip') {
