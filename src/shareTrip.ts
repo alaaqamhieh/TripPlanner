@@ -1,4 +1,3 @@
-import { SITE_URL } from './config'
 import type { TripState } from './types'
 
 // Share/backup links: the whole trip compressed into a URL hash. Opening the
@@ -43,7 +42,9 @@ export async function decodeTrip(encoded: string): Promise<TripState | null> {
 }
 
 export async function shareUrl(trip: TripState): Promise<string> {
-  return `${SITE_URL}#trip=${await encodeTrip(trip)}`
+  // Built from the current origin so links work wherever the app is hosted.
+  const base = `${window.location.origin}${window.location.pathname}`
+  return `${base}#trip=${await encodeTrip(trip)}`
 }
 
 /** Read a shared trip out of the current URL hash, if present. */
