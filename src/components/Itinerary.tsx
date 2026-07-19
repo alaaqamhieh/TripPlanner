@@ -32,9 +32,13 @@ function SlotRow({
         </span>
         {item.meal && <span className="slot-meal">{item.meal}</span>}
         {item.time && <span className="slot-time">{formatTime12h(item.time)}</span>}
+        {/* stopPropagation on pointer events too — otherwise the DragItem
+            wrapper sees the tap and opens its own fallback modal. */}
         <button
           className="slot-x slot-edit"
           aria-label={`Edit ${title}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation()
             onEdit()
@@ -45,6 +49,8 @@ function SlotRow({
         <button
           className="slot-x"
           aria-label={`Remove ${title}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation()
             onRemove()

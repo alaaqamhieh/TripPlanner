@@ -26,11 +26,15 @@ function RecCard({ scored, onPlan, onDismiss }: { scored: ScoredRec; onPlan: (dr
               {rec.budgetTier ? ` · ${'$'.repeat(rec.budgetTier)}` : ''}
             </div>
           </div>
+          {/* stopPropagation on pointer events too — otherwise the DragItem
+              wrapper sees the tap and opens the day picker as well. */}
           <button
             className="slot-x"
             style={{ marginLeft: 'auto' }}
             aria-label={`Not interested in ${rec.title}`}
             title="Not interested"
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
               onDismiss()
@@ -51,6 +55,8 @@ function RecCard({ scored, onPlan, onDismiss }: { scored: ScoredRec; onPlan: (dr
             className="mini-btn primary"
             role="button"
             style={{ marginLeft: 'auto' }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
               onPlan(null)
