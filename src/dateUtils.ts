@@ -42,6 +42,19 @@ export function formatTime12h(time: string): string {
   return `${hour12}:${String(m).padStart(2, '0')} ${period}`
 }
 
+/** Today's local calendar date as ISO 'YYYY-MM-DD'. */
+export function todayIso(): string {
+  const now = new Date()
+  return toIso(now.getFullYear(), now.getMonth() + 1, now.getDate())
+}
+
+/** ISO date `days` after the given ISO date (negative allowed). */
+export function addDaysIso(date: string, days: number): string {
+  const { year, month, day } = parseIso(date)
+  const d = new Date(Date.UTC(year, month - 1, day + days))
+  return toIso(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate())
+}
+
 /** All ISO dates from start to end, inclusive. */
 export function tripDates(start: string, end: string): string[] {
   const dates: string[] = []

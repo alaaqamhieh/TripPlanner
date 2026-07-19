@@ -985,6 +985,58 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
+/* Emoji picker (contract shared with EmojiPicker.tsx) */
+.emoji-picker { position: relative; align-self: flex-start; }
+.emoji-picker__trigger {
+  width: 56px;
+  height: 56px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-sunken);
+  font-size: 26px;
+  line-height: 1;
+  transition: border-color 0.2s, transform 0.2s var(--ease-spring);
+}
+.emoji-picker__trigger:hover { border-color: var(--accent); transform: translateY(-2px); }
+.emoji-picker__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: min(320px, 80vw);
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lift);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.emoji-picker__group-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-soft);
+}
+.emoji-picker__grid { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.emoji-picker__option {
+  width: 34px;
+  height: 34px;
+  font-size: 19px;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  background: none;
+  line-height: 1;
+}
+.emoji-picker__option:hover { background: var(--bg-sunken); }
+.emoji-picker__option--on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+.slot-note { color: var(--text-soft); font-weight: 500; font-size: 0.78rem; }
+
 .day-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 8px; }
 .day-pick {
   border: 1px solid var(--line);
