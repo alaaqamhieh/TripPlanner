@@ -603,6 +603,8 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   box-shadow: var(--shadow);
   transition: transform 0.2s var(--ease-spring), border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
 }
+/* Cards that carry a description read best top-aligned so the emoji sits by the title. */
+.opt-card:has(.opt-hint) { align-items: flex-start; }
 .opt-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
 .opt-card.on {
   border-color: var(--accent);
@@ -620,13 +622,17 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   100% { transform: scale(1); }
 }
 
-.opt-emoji { font-size: 1.9rem; line-height: 1; flex: 0 0 auto; }
-.opt-body { min-width: 0; }
-.opt-label { font-weight: 800; font-size: 0.98rem; }
-.opt-hint { color: var(--text-soft); font-size: 0.82rem; margin-top: 1px; }
+.opt-emoji { font-size: 1.9rem; line-height: 1.05; flex: 0 0 auto; }
+/* Stack the label above its description (they are inline spans by default). */
+.opt-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.opt-label { display: block; font-weight: 800; font-size: 0.98rem; line-height: 1.25; }
+.opt-hint { display: block; color: var(--text-soft); font-size: 0.82rem; line-height: 1.35; }
 .opt-level {
+  align-self: center;
   margin-left: auto;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--accent);
   flex: 0 0 auto;
 }
 

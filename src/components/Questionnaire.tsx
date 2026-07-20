@@ -303,9 +303,9 @@ export default function Questionnaire({
 
       {stepId === 'interests' && (
         <StepFrame
-          kicker={stepNo}
-          title="Quick round — is this you?"
-          sub="Gut answers only. This is how we learn what your trip should feel like."
+          kicker="Quick round ⚡"
+          title="Is this you?"
+          sub="Gut answers only — the deck below counts itself. This is how we learn what your trip should feel like."
         >
           <RapidFire
             cards={rfCards}
