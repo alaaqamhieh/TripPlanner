@@ -3,6 +3,7 @@ import { rankRecommendations, type ScoredRec } from '../engine/recommend'
 import { scheduledRefIds } from '../tripUtils'
 import { ALL_INTERESTS, INTEREST_META, type InterestId, type TripState } from '../types'
 import { DragItem } from './DragItem'
+import PlacePhoto from './PlacePhoto'
 import { StarRating } from './StarRating'
 
 // "For you": the ranked recommendation pool. Cards are draggable straight
@@ -10,16 +11,49 @@ import { StarRating } from './StarRating'
 
 const PAGE = 12
 
-function RecCard({ scored, onPlan, onDismiss }: { scored: ScoredRec; onPlan: (dropZone: string | null) => void; onDismiss: () => void }) {
+function RecCard({
+  scored,
+  destination,
+  onPlan,
+  onDismiss,
+}: {
+  scored: ScoredRec
+  destination: string
+  onPlan: (dropZone: string | null) => void
+  onDismiss: () => void
+}) {
   const { rec, why } = scored
   const accent = `var(${INTEREST_META[rec.category].cssVar})`
+  // Real places (curated, live, or AI) get a photo header; generic ideas stay compact.
+  const hasReal = rec.source === 'places' || rec.source === 'signature' || rec.source === 'ai' || Boolean(rec.photo)
   return (
     <DragItem ariaLabel={`${rec.title} — drag onto a day or tap to pick a day`} onChoose={onPlan}>
-      <div className="card" style={{ ['--card-accent' as string]: accent }}>
+      <div className={`card${hasReal ? ' card--photo' : ''}`} style={{ ['--card-accent' as string]: accent }}>
+        {hasReal && (
+          <div className="card-photo-wrap">
+            <PlacePhoto rec={rec} destination={destination} className="card-photo" />
+            <button
+              className="slot-x card-photo-x"
+              aria-label={`Not interested in ${rec.title}`}
+              title="Not interested"
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDismiss()
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div className="card-top">
-          <span className="card-emoji">{rec.emoji}</span>
+          {!hasReal && <span className="card-emoji">{rec.emoji}</span>}
           <div>
-            <div className="card-title">{rec.title}</div>
+            <div className="card-title">
+              {hasReal ? `${rec.emoji} ` : ''}
+              {rec.title}
+            </div>
             <div className="card-meta">
               {INTEREST_META[rec.category].label}
               {rec.duration ? ` · ${rec.duration}` : ''}
@@ -28,20 +62,22 @@ function RecCard({ scored, onPlan, onDismiss }: { scored: ScoredRec; onPlan: (dr
           </div>
           {/* stopPropagation on pointer events too — otherwise the DragItem
               wrapper sees the tap and opens the day picker as well. */}
-          <button
-            className="slot-x"
-            style={{ marginLeft: 'auto' }}
-            aria-label={`Not interested in ${rec.title}`}
-            title="Not interested"
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation()
-              onDismiss()
-            }}
-          >
-            ✕
-          </button>
+          {!hasReal && (
+            <button
+              className="slot-x"
+              style={{ marginLeft: 'auto' }}
+              aria-label={`Not interested in ${rec.title}`}
+              title="Not interested"
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDismiss()
+              }}
+            >
+              ✕
+            </button>
+          )}
         </div>
         <p className="card-desc">{rec.description}</p>
         {rec.rating !== undefined && (
@@ -131,6 +167,7 @@ export default function Recommendations({
           <RecCard
             key={s.rec.id}
             scored={s}
+            destination={trip.meta.destination}
             onPlan={(zone) => (zone ? onSchedule(s.rec.id, zone) : onPickDay(s.rec.id))}
             onDismiss={() => onDismiss(s.rec.id)}
           />

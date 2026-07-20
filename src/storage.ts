@@ -52,6 +52,8 @@ export function loadTrip(id: string): TripState | null {
       profile: { ...defaultProfile(), ...parsed.profile },
       pool: Array.isArray(parsed.pool) ? parsed.pool : [],
       dismissed: Array.isArray(parsed.dismissed) ? parsed.dismissed : [],
+      shortlist: Array.isArray(parsed.shortlist) ? parsed.shortlist : [],
+      swiped: Array.isArray(parsed.swiped) ? parsed.swiped : [],
       scheduled: Array.isArray(parsed.scheduled) ? parsed.scheduled : [],
       scaffolded: parsed.scaffolded === true,
     }

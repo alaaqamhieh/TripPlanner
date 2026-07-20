@@ -47,3 +47,35 @@ export function newItemId(): string {
   seq += 1
   return `it-${Date.now().toString(36)}-${seq}`
 }
+
+/** Normalized-title key so a real place dedupes its generic template twin. */
+function poolKey(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\b(the|a|of|in|at|de|la|le)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+/**
+ * Dedupe a pool by normalized title, keeping the richest source. Priority:
+ * places (live, rated) > signature (curated) > ai > custom > template.
+ */
+export function dedupePool(items: RecommendationItem[]): RecommendationItem[] {
+  const rank: Record<RecommendationItem['source'], number> = {
+    places: 5,
+    signature: 4,
+    ai: 3,
+    custom: 2,
+    template: 1,
+  }
+  const best = new Map<string, RecommendationItem>()
+  for (const item of items) {
+    const key = poolKey(item.title)
+    const existing = best.get(key)
+    if (!existing || rank[item.source] > rank[existing.source]) best.set(key, item)
+  }
+  // Preserve first-seen order of the winners.
+  const winners = new Set(best.values())
+  return items.filter((i) => winners.has(i))
+}

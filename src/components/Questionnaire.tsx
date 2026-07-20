@@ -4,7 +4,9 @@ import { burstConfetti } from '../confetti'
 import { buildTemplatePool } from '../engine/ideaTemplates'
 import { rankRecommendations } from '../engine/recommend'
 import { scaffoldItinerary } from '../engine/scaffold'
+import { signatureSpotsFor } from '../engine/signatureSpots'
 import { createTripId } from '../storage'
+import { dedupePool } from '../tripUtils'
 import {
   BUDGET_OPTIONS,
   DESTINATION_SUGGESTIONS,
@@ -117,11 +119,13 @@ export default function Questionnaire({
     }
 
     const city = profile.destination.split(',')[0].trim()
+    const signature = signatureSpotsFor(profile.destination)
     const templates = buildTemplatePool(profile.destination, profile.foodAdventure)
-    // Retakes keep everything the traveler added or imported; only the
-    // generic template ideas are rebuilt for the (possibly new) preferences.
-    const kept = retakeTrip ? retakeTrip.pool.filter((r) => r.source !== 'template') : []
-    const pool = [...kept, ...templates]
+    // Retakes keep everything the traveler added or imported (places, ai,
+    // custom); only the curated signature + generic template ideas are rebuilt
+    // for the (possibly new) destination/preferences.
+    const kept = retakeTrip ? retakeTrip.pool.filter((r) => r.source !== 'template' && r.source !== 'signature') : []
+    const pool = dedupePool([...signature, ...kept, ...templates])
 
     const meta = retakeTrip
       ? {
@@ -151,6 +155,8 @@ export default function Questionnaire({
       profile,
       pool,
       dismissed: retakeTrip?.dismissed ?? [],
+      shortlist: retakeTrip?.shortlist ?? [],
+      swiped: retakeTrip?.swiped ?? [],
       scheduled,
       scaffolded: scaffold || (retakeTrip?.scaffolded ?? false),
     }

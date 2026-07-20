@@ -68,7 +68,10 @@ interface GooglePlace {
   primaryType?: string
   priceLevel?: string
   rating?: number
+  userRatingCount?: number
   googleMapsUri?: string
+  editorialSummary?: { text?: string }
+  photos?: { name?: string }[]
 }
 
 const GOOGLE_PRICE: Record<string, 1 | 2 | 3> = {
@@ -77,6 +80,11 @@ const GOOGLE_PRICE: Record<string, 1 | 2 | 3> = {
   PRICE_LEVEL_MODERATE: 2,
   PRICE_LEVEL_EXPENSIVE: 3,
   PRICE_LEVEL_VERY_EXPENSIVE: 3,
+}
+
+/** Build a hotlinkable Places Photo URL (v1 media endpoint) from a photo name. */
+export function placePhotoUrl(photoName: string, maxPx = 800): string {
+  return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxPx}&key=${getGoogleKey()}`
 }
 
 /**
@@ -91,9 +99,9 @@ export async function searchPlaces(query: string, destination: string, category?
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': getGoogleKey(),
       'X-Goog-FieldMask':
-        'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.rating,places.googleMapsUri',
+        'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.rating,places.userRatingCount,places.googleMapsUri,places.editorialSummary,places.photos',
     },
-    body: JSON.stringify({ textQuery: where ? `${query} in ${where}` : query, maxResultCount: 6 }),
+    body: JSON.stringify({ textQuery: where ? `${query} in ${where}` : query, maxResultCount: 8 }),
   })
   if (!res.ok) throw new Error(`Search failed (${res.status})`)
   const data = (await res.json()) as { places?: GooglePlace[] }
@@ -102,13 +110,16 @@ export async function searchPlaces(query: string, destination: string, category?
     const types = p.types ?? (p.primaryType ? [p.primaryType] : [])
     const parts = (p.formattedAddress ?? '').split(',').map((s) => s.trim()).filter(Boolean)
     const cat = category ?? guessCategory(types)
+    const photoName = p.photos?.[0]?.name
     return {
       id: `pl-${p.id ?? name.toLowerCase().replace(/\W+/g, '-')}`,
       source: 'places' as const,
       title: name,
       emoji: smartEmoji(types),
       category: cat,
-      description: [titleCase(p.primaryType ?? types[0] ?? 'Place'), parts[1] ?? parts[0]].filter(Boolean).join(' · '),
+      description:
+        p.editorialSummary?.text ??
+        [titleCase(p.primaryType ?? types[0] ?? 'Place'), parts[1] ?? parts[0]].filter(Boolean).join(' · '),
       budgetTier: p.priceLevel ? GOOGLE_PRICE[p.priceLevel] : undefined,
       meal: cat === 'food' ? guessMeal(types) : undefined,
       coords:
@@ -116,8 +127,11 @@ export async function searchPlaces(query: string, destination: string, category?
           ? ([p.location.latitude, p.location.longitude] as [number, number])
           : undefined,
       rating: p.rating,
+      ratingCount: p.userRatingCount,
       googleUrl:
         p.googleMapsUri ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${where}`)}`,
+      photo: photoName ? placePhotoUrl(photoName) : undefined,
+      wikiTitle: name,
     }
   })
 }

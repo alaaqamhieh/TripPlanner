@@ -88,7 +88,7 @@ export const MEAL_META: Record<MealSlot, { label: string; emoji: string; order: 
 /** One idea in a trip's recommendation pool. */
 export interface RecommendationItem {
   id: string
-  source: 'template' | 'places' | 'custom'
+  source: 'template' | 'places' | 'signature' | 'ai' | 'custom'
   title: string
   emoji: string
   category: InterestId
@@ -101,11 +101,17 @@ export interface RecommendationItem {
   meal?: MealSlot
   /** Matched against profile.mustHaves plus 'kidFriendly' / 'nightOwl'. */
   tags?: string[]
-  /** [lat, lng] — only real places (source 'places') have coordinates. */
+  /** [lat, lng] — real places have coordinates. */
   coords?: [number, number]
   /** Google rating 1–5 when imported from Places. */
   rating?: number
+  /** How many Google reviews back the rating (popularity signal). */
+  ratingCount?: number
   googleUrl?: string
+  /** A real photo URL for the swipe deck / cards (Places or Wikipedia). */
+  photo?: string
+  /** Wikipedia page title used to lazily resolve a photo when none is set. */
+  wikiTitle?: string
 }
 
 /** Something placed on a specific day of the itinerary. */
@@ -143,6 +149,10 @@ export interface TripState {
   pool: RecommendationItem[]
   /** Rec ids hidden from "For you". */
   dismissed: string[]
+  /** Rec ids the traveler swiped right / hearted in the discovery deck. */
+  shortlist: string[]
+  /** Rec ids already seen in the swipe deck (so they don't reappear). */
+  swiped: string[]
   scheduled: ScheduledItem[]
   /** True once the starter itinerary has been generated. */
   scaffolded: boolean

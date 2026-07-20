@@ -21,6 +21,8 @@ function normalize(raw: Record<string, unknown>): SharedTrip | null {
     profile: raw.profile as TripState['profile'],
     pool: asArray(raw.pool),
     dismissed: asArray(raw.dismissed),
+    shortlist: asArray(raw.shortlist),
+    swiped: asArray(raw.swiped),
     scheduled: asArray(raw.scheduled),
     scaffolded: raw.scaffolded === true,
     _meta: raw._meta as SharedTrip['_meta'],

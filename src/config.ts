@@ -22,7 +22,32 @@ export function getGoogleKey(): string {
   } catch {
     // storage unavailable (private mode) — fall through to the build-time key
   }
-  return import.meta.env.VITE_GOOGLE_PLACES_KEY ?? ''
+  // Accept either secret name so whichever the user named it works.
+  return import.meta.env.VITE_GOOGLE_PLACES_KEY ?? import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? ''
+}
+
+/**
+ * URL of the hosted AI proxy (a Vercel serverless function that holds the
+ * Anthropic key). Empty = AI features stay dormant; everything else works.
+ * localStorage override ('tripplanner/aiurl') for local testing.
+ */
+export function getAiProxyUrl(): string {
+  try {
+    const override = window.localStorage.getItem('tripplanner/aiurl')
+    if (override) return override.replace(/\/$/, '')
+  } catch {
+    // storage unavailable — fall through
+  }
+  return (import.meta.env.VITE_AI_PROXY_URL ?? '').replace(/\/$/, '')
+}
+
+/** A user-supplied Anthropic key (bring-your-own-key fallback), if any. */
+export function getUserAiKey(): string {
+  try {
+    return window.localStorage.getItem('tripplanner/aikey') ?? ''
+  } catch {
+    return ''
+  }
 }
 
 /**
@@ -37,5 +62,6 @@ export function getSharedDbUrl(): string {
   } catch {
     // storage unavailable — fall through
   }
-  return (import.meta.env.VITE_FIREBASE_DB_URL ?? '').replace(/\/$/, '')
+  const url = import.meta.env.VITE_FIREBASE_DB_URL ?? import.meta.env.VITE_FIREBASE_DATABASE_URL ?? ''
+  return url.replace(/\/$/, '')
 }
