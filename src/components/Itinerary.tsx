@@ -1,8 +1,18 @@
 import { useState } from 'react'
-import { dayLabel, formatTime12h, tripDates } from '../dateUtils'
+import { dayLabel, dayOfMonth, formatTime12h, tripDates, tripWeeks, WEEKDAY_LABELS } from '../dateUtils'
 import { resolveItem, sortDayItems } from '../tripUtils'
 import type { ScheduledItem, TripState } from '../types'
 import { DragItem } from './DragItem'
+
+type View = 'days' | 'calendar' | 'timeline'
+
+function defaultView(): View {
+  try {
+    return window.matchMedia('(max-width: 640px)').matches ? 'calendar' : 'days'
+  } catch {
+    return 'days'
+  }
+}
 
 // The day-by-day plan. Every day card is a [data-dropzone]; recommendation
 // cards and existing plans can both be dragged onto any day. Tapping a plan
@@ -76,8 +86,9 @@ export default function Itinerary({
   onMoveItem: (id: string, date: string) => void
   onAddToDay: (date: string) => void
 }) {
-  const [view, setView] = useState<'days' | 'timeline'>('days')
+  const [view, setView] = useState<View>(defaultView)
   const days = tripDates(trip.meta.startDate, trip.meta.endDate)
+  const weeks = tripWeeks(trip.meta.startDate, trip.meta.endDate)
 
   const itemsFor = (date: string) => sortDayItems(trip.scheduled.filter((i) => i.date === date))
 
@@ -113,6 +124,9 @@ export default function Itinerary({
 
       <div className="itinerary-bar">
         <div className="view-toggle" role="tablist" aria-label="Itinerary view">
+          <button role="tab" aria-selected={view === 'calendar'} className={view === 'calendar' ? 'on' : ''} onClick={() => setView('calendar')}>
+            📅 Calendar
+          </button>
           <button role="tab" aria-selected={view === 'days'} className={view === 'days' ? 'on' : ''} onClick={() => setView('days')}>
             🗓️ Days
           </button>
@@ -127,7 +141,57 @@ export default function Itinerary({
         </div>
       </div>
 
-      {view === 'days' ? (
+      {view === 'calendar' ? (
+        <div className="cal">
+          <div className="cal-head">
+            {WEEKDAY_LABELS.map((wd) => (
+              <span key={wd} className="cal-wd">
+                {wd}
+              </span>
+            ))}
+          </div>
+          {weeks.map((week, wi) => (
+            <div key={wi} className="cal-week">
+              {week.map((date, di) =>
+                date ? (
+                  <div key={date} className="cal-cell" data-dropzone={date}>
+                    <div className="cal-cell-head">
+                      <span className="cal-daynum">{dayOfMonth(date)}</span>
+                      <button
+                        className="cal-add"
+                        aria-label={`Add a plan to ${dayLabel(date)}`}
+                        onClick={() => onAddToDay(date)}
+                      >
+                        ＋
+                      </button>
+                    </div>
+                    <div className="cal-chips">
+                      {itemsFor(date).map((item) => {
+                        const r = resolveItem(item, trip.pool)
+                        return (
+                          <button
+                            key={item.id}
+                            className="cal-chip"
+                            style={{ ['--slot-accent' as string]: r.accent }}
+                            title={r.title}
+                            onClick={() => onEditItem(item.id)}
+                          >
+                            <span aria-hidden="true">{r.emoji}</span>
+                            <span className="cal-chip-title">{r.title}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={`x-${wi}-${di}`} className="cal-cell off" aria-hidden="true" />
+                ),
+              )}
+            </div>
+          ))}
+          <p className="search-hint">Tap ＋ to add a plan to a day, or tap a plan to edit it. Switch to 🗓️ Days to drag things around.</p>
+        </div>
+      ) : view === 'days' ? (
         <div className="day-grid">
           {days.map((date, i) => (
             <div key={date} className="day-cell" data-dropzone={date}>

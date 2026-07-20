@@ -78,6 +78,43 @@ export interface MonthGroup {
   dates: string[]
 }
 
+/** Monday-first weekday index: 0 = Monday .. 6 = Sunday. */
+export function mondayIndex(date: string): number {
+  return (weekdayOf(date) + 6) % 7
+}
+
+export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+/**
+ * The trip laid out as Monday→Sunday weeks. Each week is 7 slots; days outside
+ * the trip range are null (rendered greyed). The first week is padded back to
+ * its Monday and the last week forward to its Sunday, so it reads like a real
+ * wall calendar.
+ */
+export function tripWeeks(start: string, end: string): (string | null)[][] {
+  const dates = tripDates(start, end)
+  if (!dates.length) return []
+  const weeks: (string | null)[][] = []
+  let week: (string | null)[] = Array(mondayIndex(dates[0])).fill(null)
+  for (const date of dates) {
+    week.push(date)
+    if (week.length === 7) {
+      weeks.push(week)
+      week = []
+    }
+  }
+  if (week.length) {
+    while (week.length < 7) week.push(null)
+    weeks.push(week)
+  }
+  return weeks
+}
+
+/** Day-of-month number for a compact calendar cell. */
+export function dayOfMonth(date: string): number {
+  return parseIso(date).day
+}
+
 /** Groups trip dates by calendar month, in order. */
 export function groupByMonth(dates: string[]): MonthGroup[] {
   const groups: MonthGroup[] = []

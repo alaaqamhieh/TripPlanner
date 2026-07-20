@@ -770,6 +770,85 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
 
 .day-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
 
+/* ---- 7-day Mon→Sun calendar (fits a phone; no horizontal scroll) ---- */
+.cal-head, .cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+.cal-head { margin-bottom: 6px; }
+.cal-wd {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+}
+.cal-week { margin-bottom: 5px; }
+.cal-cell {
+  min-height: 92px;
+  background: var(--bg-raised);
+  border: 1.5px dashed transparent;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.2s, transform 0.2s var(--ease-spring), box-shadow 0.2s;
+}
+.cal-cell.off { background: var(--bg-sunken); box-shadow: none; border: none; min-height: 0; }
+.cal-cell.day-cell--drag-over {
+  border-color: var(--accent);
+  transform: scale(1.04);
+  box-shadow: var(--shadow-lift);
+}
+.cal-cell-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-daynum { font-size: 0.78rem; font-weight: 800; color: var(--accent); }
+.cal-add {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 999px;
+}
+.cal-add:hover { transform: scale(1.25); }
+.cal-chips { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+.cal-chip {
+  --slot-accent: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  text-align: left;
+  background: color-mix(in srgb, var(--slot-accent) 14%, var(--bg-raised));
+  border-left: 3px solid var(--slot-accent);
+  border-radius: 5px;
+  padding: 3px 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 0;
+}
+.cal-chip:hover { filter: brightness(1.04); }
+.cal-chip-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+@media (min-width: 641px) {
+  .cal-cell { min-height: 116px; padding: 8px; }
+  .cal-chip { font-size: 0.74rem; padding: 4px 6px; }
+  .cal-wd { font-size: 0.74rem; }
+}
+/* On the tightest phones, chips show emoji only so 7 columns still fit. */
+@media (max-width: 420px) {
+  .cal-chip-title { display: none; }
+  .cal-chip { justify-content: center; padding: 4px 2px; border-left-width: 2px; }
+  .cal-cell { min-height: 82px; padding: 4px; }
+}
+
 .day-cell {
   background: var(--bg-raised);
   border: 1.5px dashed transparent;
