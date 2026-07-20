@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ToastFn, UpdateTrip } from '../App'
 import { dayLabel, daysBetween, todayIso } from '../dateUtils'
 import { burstFromElement } from '../confetti'
-import { newItemId } from '../tripUtils'
-import type { MealSlot, ScheduledItem, Theme, TripMeta, TripState } from '../types'
+import { rankRecommendations } from '../engine/recommend'
+import { newItemId, scheduledRefIds } from '../tripUtils'
+import type { MealSlot, RecommendationItem, ScheduledItem, Theme, TripMeta, TripState } from '../types'
 import AddToDayModal from './AddToDayModal'
 import ItemModal from './ItemModal'
 import Itinerary from './Itinerary'
+import PlaceDeck from './PlaceDeck'
+import PlacePhoto from './PlacePhoto'
 import Recommendations from './Recommendations'
 import TripMap from './TripMap'
 import TripSettingsModal from './TripSettingsModal'
@@ -55,6 +58,7 @@ export default function TripView({
 }) {
   const [modal, setModal] = useState<ModalState>({ kind: 'none' })
   const [navShown, setNavShown] = useState(false)
+  const [deckOpen, setDeckOpen] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setNavShown(window.scrollY > 280)
@@ -105,6 +109,45 @@ export default function TripView({
     updateTrip((prev) => ({ ...prev, dismissed: [...prev.dismissed, recId] }))
   }
 
+  // ---- swipe-deck discovery + shortlist ------------------------------------
+  const scheduledRefs = useMemo(() => scheduledRefIds(trip), [trip])
+
+  // Real places worth swiping: curated / live / AI (or anything with a photo),
+  // minus what's already been decided, ranked to the traveller's taste.
+  const deckCards = useMemo(() => {
+    const seen = new Set([...trip.swiped, ...trip.shortlist, ...trip.dismissed])
+    const real = trip.pool.filter(
+      (r) =>
+        !seen.has(r.id) &&
+        !scheduledRefs.has(r.id) &&
+        (r.source === 'signature' || r.source === 'places' || r.source === 'ai' || Boolean(r.photo)),
+    )
+    const ranked = rankRecommendations(real, trip.profile, [], new Set())
+    return ranked.map((s) => s.rec)
+  }, [trip, scheduledRefs])
+
+  const shortlistRecs = useMemo(
+    () =>
+      trip.shortlist
+        .map((id) => trip.pool.find((r) => r.id === id))
+        .filter((r): r is RecommendationItem => Boolean(r) && !scheduledRefs.has(r!.id)),
+    [trip.shortlist, trip.pool, scheduledRefs],
+  )
+
+  const shortlistPlace = (recId: string) => {
+    updateTrip((prev) => ({
+      ...prev,
+      shortlist: prev.shortlist.includes(recId) ? prev.shortlist : [...prev.shortlist, recId],
+      swiped: prev.swiped.includes(recId) ? prev.swiped : [...prev.swiped, recId],
+    }))
+  }
+  const skipPlace = (recId: string) => {
+    updateTrip((prev) => ({ ...prev, swiped: prev.swiped.includes(recId) ? prev.swiped : [...prev.swiped, recId] }))
+  }
+  const removeFromShortlist = (recId: string) => {
+    updateTrip((prev) => ({ ...prev, shortlist: prev.shortlist.filter((id) => id !== recId) }))
+  }
+
   const saveMeta = (meta: TripMeta) => {
     updateTrip((prev) => ({ ...prev, meta }))
     close()
@@ -127,6 +170,9 @@ export default function TripView({
           <div className="stickynav-links">
             <a href="#itinerary">🗓️ Plan</a>
             <a href="#foryou">✨ For you</a>
+            <button className="stickynav-link-btn" onClick={() => setDeckOpen(true)}>
+              🔥 Discover
+            </button>
             <a href="#map">🗺️ Map</a>
           </div>
           <div className="stickynav-right">
@@ -170,7 +216,10 @@ export default function TripView({
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 26 }}>
-            <button className="btn warm" onClick={onRetake}>
+            <button className="btn warm" onClick={() => setDeckOpen(true)}>
+              🔥 Discover places
+            </button>
+            <button className="btn ghost" style={{ borderColor: 'rgba(244,239,230,0.5)', color: '#f4efe6' }} onClick={onRetake}>
               🎯 Retune my trip
             </button>
             {onExport && (
@@ -196,6 +245,36 @@ export default function TripView({
           onAddToDay={(date) => setModal({ kind: 'newItem', date })}
         />
 
+        {shortlistRecs.length > 0 && (
+          <section id="shortlist">
+            <div className="section-head">
+              <p className="section-kicker">Swiped right</p>
+              <h2 className="section-title">Your shortlist</h2>
+              <p className="section-sub">Places you loved in the deck. Drop one onto a day when you're ready.</p>
+            </div>
+            <div className="shortlist-row">
+              {shortlistRecs.map((rec) => (
+                <div key={rec.id} className="shortlist-card">
+                  <PlacePhoto rec={rec} destination={trip.meta.destination} />
+                  <div className="shortlist-card-body">
+                    <span className="shortlist-card-title">
+                      {rec.emoji} {rec.title}
+                    </span>
+                    <div className="shortlist-card-actions">
+                      <button className="mini-btn primary" onClick={() => setModal({ kind: 'addToDay', recId: rec.id })}>
+                        ＋ Plan
+                      </button>
+                      <button className="mini-btn" onClick={() => removeFromShortlist(rec.id)} aria-label="Remove from shortlist">
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <Recommendations
           trip={trip}
           onSchedule={(recId, date) => {
@@ -205,6 +284,7 @@ export default function TripView({
           onPickDay={(recId) => setModal({ kind: 'addToDay', recId })}
           onDismiss={dismissRec}
           onAddCustom={() => setModal({ kind: 'newItem' })}
+          onDiscover={() => setDeckOpen(true)}
           onFindPlaces={onFindPlaces ?? (() => {})}
           findingPlaces={findingPlaces ?? false}
           placesAvailable={placesAvailable ?? false}
@@ -222,6 +302,24 @@ export default function TripView({
         {trip.meta.emoji} {trip.meta.name} — every change saves automatically on this device. Use Share to take it to
         another one.
       </footer>
+
+      {deckOpen && (
+        <PlaceDeck
+          cards={deckCards}
+          destination={trip.meta.destination}
+          onShortlist={shortlistPlace}
+          onSkip={skipPlace}
+          onPlan={(recId) => {
+            skipPlace(recId)
+            setDeckOpen(false)
+            setModal({ kind: 'addToDay', recId })
+          }}
+          onClose={() => setDeckOpen(false)}
+          onNeedMore={() => onFindPlaces?.()}
+          loadingMore={findingPlaces ?? false}
+          canLoadMore={Boolean(placesAvailable)}
+        />
+      )}
 
       {modal.kind === 'addToDay' && <AddToDayModal trip={trip} recId={modal.recId} onAdd={schedule} onClose={close} />}
       {(modal.kind === 'newItem' || modal.kind === 'editItem') && (

@@ -112,6 +112,7 @@ export default function Recommendations({
   onPickDay,
   onDismiss,
   onAddCustom,
+  onDiscover,
   onFindPlaces,
   findingPlaces,
   placesAvailable,
@@ -121,6 +122,7 @@ export default function Recommendations({
   onPickDay: (recId: string) => void
   onDismiss: (recId: string) => void
   onAddCustom: () => void
+  onDiscover: () => void
   onFindPlaces: () => void
   findingPlaces: boolean
   placesAvailable: boolean
@@ -147,8 +149,11 @@ export default function Recommendations({
         <h2 className="section-title">For you</h2>
         <p className="section-sub">
           Ideas ranked by how well they fit how you travel. Drag one onto a day, or tap ＋ Plan. Not you? Dismiss it —
-          the list adapts.
+          the list adapts. Prefer swiping? <strong>🔥 Discover</strong> below flips through them with photos.
         </p>
+        <button className="btn warm" style={{ marginTop: 12 }} onClick={onDiscover}>
+          🔥 Discover places by swiping
+        </button>
       </div>
 
       <div className="chip-row">

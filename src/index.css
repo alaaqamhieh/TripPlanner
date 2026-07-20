@@ -733,6 +733,136 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
 .quiz-build-lines { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .quiz-build-lines span { animation: rise-in 0.6s var(--ease-spring) both; color: var(--text-soft); font-weight: 600; }
 
+/* ------------------------------------------------------ Place swipe deck */
+
+.deck-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  animation: fade-in 0.25s ease;
+}
+.deck-top { display: flex; align-items: center; gap: 12px; }
+.deck-count { margin-left: auto; font-weight: 800; font-size: 0.82rem; color: var(--text-soft); }
+
+.deck-stage {
+  flex: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 10px 0;
+}
+
+.deck-card {
+  position: absolute;
+  width: min(430px, 100%);
+  max-height: 100%;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: grab;
+  touch-action: none;
+  animation: rf-in 0.35s var(--ease-spring) both;
+}
+.deck-card:active { cursor: grabbing; }
+.deck-card--behind {
+  transform: scale(0.94) translateY(14px);
+  filter: brightness(0.96);
+  animation: none;
+  pointer-events: none;
+}
+.deck-leaving-shortlist { animation: rf-out-love 0.32s ease both; }
+.deck-leaving-skip { animation: rf-out-nah 0.32s ease both; }
+.deck-leaving-plan { animation: rf-out-like 0.32s ease both; }
+
+.deck-photo-wrap { position: relative; flex: 1; min-height: 0; }
+.deck-photo { width: 100%; height: 100%; min-height: 260px; aspect-ratio: auto; }
+.deck-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+.deck-badge {
+  position: absolute;
+  top: 18px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  color: #fff;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  transition: opacity 0.05s linear;
+}
+.deck-badge.like { left: 18px; transform: rotate(-12deg); background: rgba(79, 143, 104, 0.9); }
+.deck-badge.nope { right: 18px; transform: rotate(12deg); background: rgba(193, 78, 51, 0.9); }
+.deck-badge.plan { left: 50%; top: 40%; transform: translateX(-50%); background: rgba(15, 107, 102, 0.92); }
+
+.deck-cat {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 12px;
+  border-radius: 999px;
+  backdrop-filter: blur(3px);
+}
+
+.deck-body { padding: 14px 16px 16px; background: var(--bg-raised); }
+.deck-title { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; }
+.deck-rating { color: var(--text-soft); font-size: 0.84rem; font-weight: 600; margin-top: 4px; }
+.deck-desc { color: var(--text-soft); font-size: 0.92rem; margin: 8px 0 0; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.deck-empty { text-align: center; padding: 30px 16px; }
+.deck-empty-emoji { font-size: 3.4rem; animation: bob 1.8s ease-in-out infinite; }
+.deck-empty h3 { font-family: var(--serif); font-size: 1.5rem; margin-top: 10px; }
+
+.deck-actions { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 8px 0 4px; }
+.deck-btn {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--bg-raised);
+  font-size: 1.5rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s var(--ease-spring), box-shadow 0.2s, border-color 0.2s;
+}
+.deck-btn:hover { transform: translateY(-3px) scale(1.08); box-shadow: var(--shadow-lift); }
+.deck-btn:active { transform: scale(0.92); }
+.deck-btn.skip:hover { border-color: var(--coral); }
+.deck-btn.love:hover { border-color: var(--cat-nature); }
+.deck-btn.plan { width: 52px; height: 52px; font-size: 1.2rem; }
+.deck-btn.plan:hover { border-color: var(--accent); }
+.deck-hint { text-align: center; color: var(--text-soft); font-size: 0.78rem; margin: 6px 0 0; }
+
+/* Shortlist tray on the trip page */
+.shortlist-row { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 12px; scrollbar-width: thin; }
+.shortlist-card {
+  flex: 0 0 160px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.shortlist-card .place-photo { aspect-ratio: 16 / 11; }
+.shortlist-card-body { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.shortlist-card-title { font-weight: 800; font-size: 0.84rem; line-height: 1.2; }
+.shortlist-card-actions { display: flex; gap: 6px; margin-top: auto; }
+
 /* ------------------------------------------------------------ Itinerary */
 
 .view-toggle {
@@ -1321,6 +1451,18 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   transition: background-color 0.2s, color 0.2s;
 }
 .stickynav-links a:hover { background: var(--bg-sunken); color: var(--accent); }
+.stickynav-link-btn {
+  border: none;
+  background: none;
+  color: var(--text-soft);
+  font-weight: 700;
+  font-size: 0.86rem;
+  padding: 6px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s;
+}
+.stickynav-link-btn:hover { background: var(--bg-sunken); color: var(--accent); }
 .stickynav-right { display: flex; align-items: center; gap: 10px; }
 
 .saved-dot {
