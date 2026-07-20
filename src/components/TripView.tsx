@@ -6,6 +6,7 @@ import { rankRecommendations } from '../engine/recommend'
 import { newItemId, scheduledRefIds } from '../tripUtils'
 import type { MealSlot, RecommendationItem, ScheduledItem, Theme, TripMeta, TripState } from '../types'
 import AddToDayModal from './AddToDayModal'
+import AiAssistant from './AiAssistant'
 import ItemModal from './ItemModal'
 import Itinerary from './Itinerary'
 import PlaceDeck from './PlaceDeck'
@@ -302,6 +303,9 @@ export default function TripView({
         {trip.meta.emoji} {trip.meta.name} — every change saves automatically on this device. Use Share to take it to
         another one.
       </footer>
+
+      <AiAssistant trip={trip} updateTrip={updateTrip} showToast={showToast} />
+
 
       {deckOpen && (
         <PlaceDeck
