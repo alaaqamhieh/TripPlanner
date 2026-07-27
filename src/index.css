@@ -863,6 +863,99 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
 .shortlist-card-title { font-weight: 800; font-size: 0.84rem; line-height: 1.2; }
 .shortlist-card-actions { display: flex; gap: 6px; margin-top: auto; }
 
+/* Researched "essentials" guide — real must-see & must-eat places */
+#essentials { margin-top: 8px; }
+.guide-section { margin-top: 22px; }
+.guide-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+.guide-section-emoji {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  font-size: 1rem;
+}
+.guide-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px 2px 14px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.guide-card {
+  flex: 0 0 244px;
+  scroll-snap-align: start;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-top: 3px solid var(--card-accent, var(--accent));
+}
+.guide-card-photo { position: relative; }
+.guide-card-photo .place-photo { aspect-ratio: 16 / 10; }
+.guide-card-buzz {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(17, 20, 26, 0.82);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 999px;
+  backdrop-filter: blur(3px);
+}
+.guide-card-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.guide-card-title { margin: 0; font-size: 0.95rem; font-weight: 800; line-height: 1.22; }
+.guide-card-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.guide-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+a.mini-btn { text-decoration: none; display: inline-flex; align-items: center; }
+.mini-btn.is-planned { background: var(--bg-sunken); color: var(--text-soft); cursor: default; }
+.mini-btn.is-planned:hover { transform: none; }
+.mini-btn.is-on { background: var(--coral); border-color: var(--coral); color: #fff; }
+.guide-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 4px;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+.guide-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  animation: guide-spin 0.8s linear infinite;
+  flex: 0 0 auto;
+}
+@keyframes guide-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .guide-spinner { animation-duration: 2s; } }
+
 /* ------------------------------------------------------------ AI planner */
 
 .ai-fab {

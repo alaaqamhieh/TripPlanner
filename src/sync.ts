@@ -25,6 +25,7 @@ function normalize(raw: Record<string, unknown>): SharedTrip | null {
     swiped: asArray(raw.swiped),
     scheduled: asArray(raw.scheduled),
     scaffolded: raw.scaffolded === true,
+    guide: (raw.guide as TripState['guide']) ?? undefined,
     _meta: raw._meta as SharedTrip['_meta'],
   }
 }

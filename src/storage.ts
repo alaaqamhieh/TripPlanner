@@ -56,6 +56,7 @@ export function loadTrip(id: string): TripState | null {
       swiped: Array.isArray(parsed.swiped) ? parsed.swiped : [],
       scheduled: Array.isArray(parsed.scheduled) ? parsed.scheduled : [],
       scaffolded: parsed.scaffolded === true,
+      guide: parsed.guide && Array.isArray(parsed.guide.sections) ? parsed.guide : undefined,
     }
   } catch {
     return null

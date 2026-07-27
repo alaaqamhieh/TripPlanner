@@ -9,6 +9,7 @@ import AddToDayModal from './AddToDayModal'
 import AiAssistant from './AiAssistant'
 import ItemModal from './ItemModal'
 import Itinerary from './Itinerary'
+import MustDoGuide from './MustDoGuide'
 import PlaceDeck from './PlaceDeck'
 import PlacePhoto from './PlacePhoto'
 import Recommendations from './Recommendations'
@@ -41,6 +42,8 @@ export default function TripView({
   onFindPlaces,
   findingPlaces,
   placesAvailable,
+  onResearch,
+  researching,
 }: {
   trip: TripState
   theme: Theme
@@ -56,6 +59,8 @@ export default function TripView({
   onFindPlaces?: () => void
   findingPlaces?: boolean
   placesAvailable?: boolean
+  onResearch?: () => void
+  researching?: boolean
 }) {
   const [modal, setModal] = useState<ModalState>({ kind: 'none' })
   const [navShown, setNavShown] = useState(false)
@@ -244,6 +249,18 @@ export default function TripView({
           onRemoveItem={removeItem}
           onMoveItem={moveItem}
           onAddToDay={(date) => setModal({ kind: 'newItem', date })}
+        />
+
+        <MustDoGuide
+          trip={trip}
+          onPlan={(recId) => setModal({ kind: 'addToDay', recId })}
+          onShortlist={(recId) => {
+            shortlistPlace(recId)
+            showToast('❤️ Added to your shortlist')
+          }}
+          onResearch={onResearch ?? (() => {})}
+          researching={researching ?? false}
+          placesAvailable={placesAvailable ?? false}
         />
 
         {shortlistRecs.length > 0 && (

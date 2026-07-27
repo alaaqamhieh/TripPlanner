@@ -141,6 +141,24 @@ export interface TripMeta {
   createdAt: string
 }
 
+/** One themed group in the researched destination guide (must-see, breakfast…). */
+export interface GuideSection {
+  key: string
+  label: string
+  emoji: string
+  /** Pool rec ids that belong to this section, best-first. */
+  recIds: string[]
+}
+
+/** The researched "must-see & must-eat" guide for a destination (real places). */
+export interface TripGuide {
+  /** The destination string this guide was researched for. */
+  generatedFor: string
+  /** ISO timestamp of when it was built. */
+  at: string
+  sections: GuideSection[]
+}
+
 /** The full persisted state of one trip. */
 export interface TripState {
   version: number
@@ -156,6 +174,8 @@ export interface TripState {
   scheduled: ScheduledItem[]
   /** True once the starter itinerary has been generated. */
   scaffolded: boolean
+  /** Researched real-place guide (must-see / must-eat), keyed to the destination. */
+  guide?: TripGuide
 }
 
 export type Theme = 'light' | 'dark'

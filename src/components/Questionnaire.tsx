@@ -5,6 +5,7 @@ import { buildTemplatePool } from '../engine/ideaTemplates'
 import { rankRecommendations } from '../engine/recommend'
 import { scaffoldItinerary } from '../engine/scaffold'
 import { signatureSpotsFor } from '../engine/signatureSpots'
+import { placesAvailable } from '../placeSearch'
 import { createTripId } from '../storage'
 import { dedupePool } from '../tripUtils'
 import {
@@ -120,7 +121,10 @@ export default function Questionnaire({
 
     const city = profile.destination.split(',')[0].trim()
     const signature = signatureSpotsFor(profile.destination)
-    const templates = buildTemplatePool(profile.destination, profile.foodAdventure)
+    // With a Places key we research real, named spots for the trip (see App's
+    // guide + live-places), so we don't seed generic "idea" templates at all.
+    // Without a key, templates are the offline fallback so the list isn't empty.
+    const templates = placesAvailable() ? [] : buildTemplatePool(profile.destination, profile.foodAdventure)
     // Retakes keep everything the traveler added or imported (places, ai,
     // custom); only the curated signature + generic template ideas are rebuilt
     // for the (possibly new) destination/preferences.

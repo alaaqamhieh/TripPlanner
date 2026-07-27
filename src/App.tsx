@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { findLivePlaces } from './engine/liveQueries'
+import { buildGuide } from './engine/mustDo'
+import { rankRecommendations } from './engine/recommend'
+import { scaffoldItinerary } from './engine/scaffold'
+import { scheduledRefIds } from './tripUtils'
 import { downloadICS } from './ics'
 import { placesAvailable } from './placeSearch'
 import { decodeTrip, shareUrl, tripFromLocation } from './shareTrip'
@@ -41,10 +45,13 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null)
   const [savedFlash, setSavedFlash] = useState(false)
   const [findingPlaces, setFindingPlaces] = useState(false)
+  const [researching, setResearching] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editedRef = useRef(false)
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Destination we've already kicked off auto-research for this session.
+  const researchedRef = useRef<string>('')
 
   // ---- persistence pipeline -------------------------------------------------
   useEffect(() => saveIndex(index), [index])
@@ -213,6 +220,83 @@ export default function App() {
       .finally(() => setFindingPlaces(false))
   }, [trip, findingPlaces, showToast, updateTrip])
 
+  // Research the destination into a "must-see & must-eat" guide of real, named,
+  // verified places. Merges the finds into the pool (remapping any that match a
+  // place already there) and — for a fresh, still-empty starter plan — seeds the
+  // itinerary from those real spots instead of leaving it blank.
+  const handleResearch = useCallback(
+    (opts?: { manual?: boolean }) => {
+      if (!trip || researching) return
+      const dest = trip.meta.destination.trim()
+      if (!dest) {
+        if (opts?.manual) showToast('Set a destination in trip settings first')
+        return
+      }
+      const profile = trip.profile
+      setResearching(true)
+      void buildGuide(profile, dest)
+        .then((result) => {
+          if (!result.sections.length) {
+            if (opts?.manual) showToast('Couldn’t find enough top spots — try the map search below')
+            return
+          }
+          updateTrip((prev) => {
+            const byId = new Map(prev.pool.map((r) => [r.id, r] as const))
+            const byTitle = new Map(prev.pool.map((r) => [r.title.toLowerCase(), r.id] as const))
+            const additions: RecommendationItem[] = []
+            const remap = new Map<string, string>()
+            for (const rec of result.recs) {
+              if (byId.has(rec.id)) {
+                remap.set(rec.id, rec.id)
+                continue
+              }
+              const title = rec.title.toLowerCase()
+              const twin = byTitle.get(title)
+              if (twin) {
+                remap.set(rec.id, twin)
+                continue
+              }
+              additions.push(rec)
+              remap.set(rec.id, rec.id)
+              byId.set(rec.id, rec)
+              byTitle.set(title, rec.id)
+            }
+            const sections = result.sections.map((s) => ({
+              ...s,
+              recIds: s.recIds.map((id) => remap.get(id) ?? id),
+            }))
+            const pool = [...prev.pool, ...additions]
+            const guide = { generatedFor: dest, at: new Date().toISOString(), sections }
+            // Seed a real-place starter plan only when the traveler asked to
+            // scaffold but nothing's on the calendar yet (e.g. no key at quiz time).
+            let scheduled = prev.scheduled
+            if (prev.scaffolded && prev.scheduled.length === 0) {
+              const ranked = rankRecommendations(pool, profile, prev.dismissed, scheduledRefIds(prev))
+              scheduled = scaffoldItinerary(profile, prev.meta, ranked)
+            }
+            return { ...prev, pool, guide, scheduled }
+          })
+          if (opts?.manual) {
+            showToast(`✨ Researched ${dest.split(',')[0]} — real must-see & must-eat spots below`)
+          }
+        })
+        .finally(() => setResearching(false))
+    },
+    [trip, researching, showToast, updateTrip],
+  )
+
+  // Auto-research a trip's destination once (per session, and once it's been
+  // saved with a matching guide it won't re-run across sessions either).
+  useEffect(() => {
+    if (!trip || researching) return
+    const dest = trip.meta.destination.trim()
+    if (!dest || !placesAvailable()) return
+    if (trip.guide?.generatedFor === dest) return
+    if (researchedRef.current === dest) return
+    researchedRef.current = dest
+    handleResearch()
+  }, [trip, researching, handleResearch])
+
   // ---- trip lifecycle -------------------------------------------------------
   const adoptTrip = useCallback(
     (newTrip: TripState) => {
@@ -265,6 +349,8 @@ export default function App() {
         onFindPlaces={handleFindPlaces}
         findingPlaces={findingPlaces}
         placesAvailable={placesAvailable()}
+        onResearch={() => handleResearch({ manual: true })}
+        researching={researching}
       />
     )
   } else if (screen.mode === 'trip') {

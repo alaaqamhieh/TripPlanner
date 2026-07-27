@@ -130,10 +130,20 @@ export default function Recommendations({
   const [filter, setFilter] = useState<InterestId | 'all'>('all')
   const [limit, setLimit] = useState(PAGE)
 
-  const ranked = useMemo(
+  const allRanked = useMemo(
     () => rankRecommendations(trip.pool, trip.profile, trip.dismissed, scheduledRefIds(trip)),
     [trip],
   )
+  // Once the destination's been researched into real, named places, drop the
+  // generic "idea" templates entirely — the traveler asked for actual spots, not
+  // "breakfast by the sea". Without a key (no guide, only a few curated seeds) we
+  // keep templates so the list still has enough to work with.
+  const hasReal = useMemo(() => {
+    if (trip.guide?.generatedFor) return true
+    const realCount = trip.pool.filter((r) => r.source === 'places' || r.source === 'ai').length
+    return realCount >= 6
+  }, [trip.pool, trip.guide])
+  const ranked = hasReal ? allRanked.filter((s) => s.rec.source !== 'template') : allRanked
   const filtered = filter === 'all' ? ranked : ranked.filter((s) => s.rec.category === filter)
   const visible = filtered.slice(0, limit)
 
@@ -148,8 +158,9 @@ export default function Recommendations({
         <p className="section-kicker">Matched to your answers</p>
         <h2 className="section-title">For you</h2>
         <p className="section-sub">
-          Ideas ranked by how well they fit how you travel. Drag one onto a day, or tap ＋ Plan. Not you? Dismiss it —
-          the list adapts. Prefer swiping? <strong>🔥 Discover</strong> below flips through them with photos.
+          {hasReal ? 'Real places' : 'Ideas'} ranked by how well they fit how you travel. Drag one onto a day, or tap ＋
+          Plan. Not you? Dismiss it — the list adapts. Prefer swiping? <strong>🔥 Discover</strong> below flips through
+          them with photos.
         </p>
         <button className="btn warm" style={{ marginTop: 12 }} onClick={onDiscover}>
           🔥 Discover places by swiping
