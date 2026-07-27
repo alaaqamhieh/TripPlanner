@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { placesAvailable, searchPlaces } from '../placeSearch'
+import { exploreArea, geocode, placesAvailable, searchPlaces } from '../placeSearch'
 import { useReveal } from '../useReveal'
-import { INTEREST_META, type RecommendationItem, type TripState } from '../types'
+import { ALL_INTERESTS, INTEREST_META, type InterestId, type RecommendationItem, type TripState } from '../types'
 
-// The trip map: every pool idea with coordinates gets an emoji pin (only
-// real imported places have coords), plus a free-text place search that can
-// pull anything in the destination onto the map and into the pool.
+// The trip map, now an "explore this area" map: pan anywhere, pick a category,
+// and pull the most popular, well-reviewed verified places nearby (Google
+// Places, ranked by popularity + rating) as pins you can add to your plan or
+// shortlist. Pool items with coordinates are always pinned too.
 
-function pinIcon(emoji: string, category: string, search = false): L.DivIcon {
+function pinIcon(emoji: string, category: string, kind: 'pool' | 'find'): L.DivIcon {
   return L.divIcon({
-    className: `map-pin${search ? ' search' : ''}`,
+    className: `map-pin${kind === 'find' ? ' search' : ''}`,
     html: `<span style="--card-accent: var(--cat-${category})">${emoji}</span>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
@@ -19,32 +20,36 @@ function pinIcon(emoji: string, category: string, search = false): L.DivIcon {
 }
 
 type Selected = { rec: RecommendationItem; inPool: boolean }
+type Cat = InterestId | 'all'
 
 export default function TripMap({
   trip,
   onPlan,
+  onShortlist,
   onImport,
   showToast,
 }: {
   trip: TripState
-  /** Open the day-picker for a pool item. */
   onPlan: (recId: string) => void
-  /** Add a searched place to the pool; returns nothing (map re-pins live). */
+  onShortlist: (recId: string) => void
   onImport: (rec: RecommendationItem) => void
   showToast: (msg: string) => void
 }) {
   const mapEl = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const poolLayer = useRef<L.LayerGroup | null>(null)
-  const searchLayer = useRef<L.LayerGroup | null>(null)
+  const findLayer = useRef<L.LayerGroup | null>(null)
   const fittedOnce = useRef(false)
-  const [selected, setSelected] = useState<Selected | null>(null)
   const ref = useReveal<HTMLElement>()
 
+  const [selected, setSelected] = useState<Selected | null>(null)
+  const [category, setCategory] = useState<Cat>('all')
+  const [exploring, setExploring] = useState(false)
+  const [findCount, setFindCount] = useState<number | null>(null)
+  const [note, setNote] = useState('')
+
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<RecommendationItem[] | null>(null)
   const [searching, setSearching] = useState(false)
-  const [searchError, setSearchError] = useState('')
 
   const canSearch = placesAvailable()
 
@@ -53,22 +58,23 @@ export default function TripMap({
     const map = L.map(mapEl.current, { scrollWheelZoom: false, center: [20, 0], zoom: 2 })
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 18,
+      maxZoom: 19,
     }).addTo(map)
     map.on('click', () => setSelected(null))
     mapRef.current = map
     poolLayer.current = L.layerGroup().addTo(map)
-    searchLayer.current = L.layerGroup().addTo(map)
+    findLayer.current = L.layerGroup().addTo(map)
     return () => {
       map.remove()
       mapRef.current = null
       poolLayer.current = null
-      searchLayer.current = null
+      findLayer.current = null
       fittedOnce.current = false
     }
   }, [])
 
-  // (Re)pin pool items whenever they change, so imports show up live.
+  // Pin pool items with coordinates; fit to them once, else centre on the
+  // destination so "explore this area" starts where the trip is.
   useEffect(() => {
     const map = mapRef.current
     const layer = poolLayer.current
@@ -76,105 +82,140 @@ export default function TripMap({
     layer.clearLayers()
     const withCoords = trip.pool.filter((r) => r.coords)
     for (const rec of withCoords) {
-      L.marker(rec.coords!, { icon: pinIcon(rec.emoji, rec.category) })
+      L.marker(rec.coords!, { icon: pinIcon(rec.emoji, rec.category, 'pool') })
         .on('click', () => setSelected({ rec, inPool: true }))
         .addTo(layer)
     }
-    if (withCoords.length && !fittedOnce.current) {
-      map.fitBounds(L.latLngBounds(withCoords.map((r) => r.coords!)), { padding: [40, 40], maxZoom: 13 })
+    if (fittedOnce.current) return
+    if (withCoords.length) {
+      map.fitBounds(L.latLngBounds(withCoords.map((r) => r.coords!)), { padding: [40, 40], maxZoom: 14 })
       fittedOnce.current = true
+    } else if (canSearch && trip.meta.destination) {
+      fittedOnce.current = true
+      void geocode(trip.meta.destination).then((c) => {
+        if (c && mapRef.current) mapRef.current.setView(c, 13)
+      })
     }
-  }, [trip.pool])
+  }, [trip.pool, trip.meta.destination, canSearch])
 
-  const runSearch = async () => {
+  const searchThisArea = async () => {
+    const map = mapRef.current
+    if (!map || exploring) return
+    setExploring(true)
+    setNote('')
+    setSelected(null)
+    try {
+      const center = map.getCenter()
+      const ne = map.getBounds().getNorthEast()
+      const radius = map.distance(center, ne) // metres, centre → corner ≈ visible area
+      const found = await exploreArea([center.lat, center.lng], radius, category)
+      const layer = findLayer.current
+      layer?.clearLayers()
+      for (const rec of found) {
+        L.marker(rec.coords!, { icon: pinIcon(rec.emoji, rec.category, 'find') })
+          .on('click', () => setSelected({ rec, inPool: trip.pool.some((r) => r.id === rec.id) }))
+          .addTo(layer!)
+      }
+      setFindCount(found.length)
+      if (!found.length) setNote('No highly-rated spots here — try zooming out or another category.')
+    } catch {
+      setNote('Couldn’t search here just now — check the connection (or the API key) and try again.')
+    } finally {
+      setExploring(false)
+    }
+  }
+
+  const runTextSearch = async () => {
     const q = query.trim()
     if (!q || searching) return
     setSearching(true)
-    setSearchError('')
+    setNote('')
     try {
       const found = await searchPlaces(q, trip.meta.destination || trip.meta.name)
-      setResults(found)
-      const layer = searchLayer.current
+      const layer = findLayer.current
       const map = mapRef.current
-      if (layer && map) {
-        layer.clearLayers()
-        const withCoords = found.filter((r) => r.coords)
-        for (const rec of withCoords) {
-          L.marker(rec.coords!, { icon: pinIcon(rec.emoji, rec.category, true) })
-            .on('click', () => setSelected({ rec, inPool: false }))
-            .addTo(layer)
-        }
-        if (withCoords.length) {
-          map.fitBounds(L.latLngBounds(withCoords.map((r) => r.coords!)), { padding: [40, 40], maxZoom: 14 })
-        }
+      layer?.clearLayers()
+      const withCoords = found.filter((r) => r.coords)
+      for (const rec of withCoords) {
+        L.marker(rec.coords!, { icon: pinIcon(rec.emoji, rec.category, 'find') })
+          .on('click', () => setSelected({ rec, inPool: trip.pool.some((r) => r.id === rec.id) }))
+          .addTo(layer!)
       }
-      if (!found.length) setSearchError('No places found — try different words.')
+      setFindCount(withCoords.length)
+      if (withCoords.length && map) map.fitBounds(L.latLngBounds(withCoords.map((r) => r.coords!)), { padding: [40, 40], maxZoom: 15 })
+      if (!found.length) setNote('No places found — try different words.')
     } catch {
-      setSearchError('Search failed — check the connection (or the API key) and try again.')
+      setNote('Search failed — try again.')
     } finally {
       setSearching(false)
     }
   }
 
-  const importAndPlan = (rec: RecommendationItem, plan: boolean) => {
-    const already = trip.pool.some((r) => r.id === rec.id)
-    if (!already) onImport(rec)
+  const act = (rec: RecommendationItem, how: 'plan' | 'shortlist') => {
+    if (!trip.pool.some((r) => r.id === rec.id)) onImport(rec)
     setSelected(null)
-    searchLayer.current?.clearLayers()
-    setResults(null)
-    if (plan) onPlan(rec.id)
-    else showToast(`${rec.emoji} Added to your ideas ✓`)
+    if (how === 'plan') onPlan(rec.id)
+    else {
+      onShortlist(rec.id)
+      showToast(`❤️ Shortlisted ${rec.title}`)
+    }
   }
 
   return (
     <section id="map" ref={ref} className="reveal">
       <div className="section-head">
-        <p className="section-kicker">Get your bearings</p>
-        <h2 className="section-title">Trip map</h2>
+        <p className="section-kicker">Explore on the map</p>
+        <h2 className="section-title">Find the best places near you</h2>
         <p className="section-sub">
-          Real places you've found get pins here.{' '}
           {canSearch
-            ? 'Search anything — a restaurant someone recommended, a viewpoint, a neighborhood — and add it to your plan.'
-            : 'Add a Google Places key to search and pin real spots; ideas without an exact address stay in the list above.'}
+            ? 'Move the map to any area, pick a vibe, and pull the most popular, best-reviewed spots there — then add them to a day or your shortlist.'
+            : 'Add a Google Places key to explore top-rated verified places on the map. Curated ideas above work everywhere in the meantime.'}
         </p>
       </div>
 
       {canSearch && (
-        <div className="map-search">
-          <input
-            placeholder={`Search places in ${trip.meta.destination.split(',')[0] || 'your destination'}…`}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-            aria-label="Search for a place"
-          />
-          <button className="btn" onClick={runSearch} disabled={searching || !query.trim()}>
-            {searching ? 'Searching…' : '🔍 Search'}
-          </button>
-        </div>
+        <>
+          <div className="chip-row" style={{ marginBottom: 8 }}>
+            <button className={`chip${category === 'all' ? ' on' : ''}`} onClick={() => setCategory('all')}>
+              ⭐ Top spots
+            </button>
+            {ALL_INTERESTS.map((c) => (
+              <button key={c} className={`chip${category === c ? ' on' : ''}`} onClick={() => setCategory(c)}>
+                {INTEREST_META[c].emoji} {INTEREST_META[c].label}
+              </button>
+            ))}
+          </div>
+          <div className="map-search">
+            <input
+              placeholder={`Or search a place by name in ${trip.meta.destination.split(',')[0] || 'your destination'}…`}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && runTextSearch()}
+              aria-label="Search for a place by name"
+            />
+            <button className="btn ghost" onClick={runTextSearch} disabled={searching || !query.trim()}>
+              {searching ? '…' : '🔍'}
+            </button>
+          </div>
+        </>
       )}
-      {searchError && <p className="search-hint error">{searchError}</p>}
-      {results && results.length > 0 && (
-        <div className="place-results">
-          {results.map((rec) => (
-            <div key={rec.id} className="place-row">
-              <button className="place-pick" onClick={() => setSelected({ rec, inPool: false })}>
-                <span className="place-name">
-                  {rec.emoji} {rec.title}
-                  {rec.rating ? ` · ${rec.rating.toFixed(1)}★` : ''}
-                </span>
-                <span className="place-meta">{rec.description}</span>
-              </button>
-              <button className="mini-btn primary" onClick={() => importAndPlan(rec, true)}>
-                ＋ Plan
-              </button>
-            </div>
-          ))}
-        </div>
+      {note && <p className="search-hint error">{note}</p>}
+      {findCount !== null && !note && (
+        <p className="search-hint">
+          Showing {findCount} top-rated {category === 'all' ? 'spot' : INTEREST_META[category as InterestId].label.toLowerCase()}
+          {findCount === 1 ? '' : 's'} — tap a pin to add it.
+        </p>
       )}
 
-      <div className="map-wrap" style={{ marginTop: 12 }}>
+      <div className="map-wrap" style={{ marginTop: 10 }}>
         <div ref={mapEl} className="trip-map" />
+
+        {canSearch && !selected && (
+          <button className="map-explore-btn" onClick={searchThisArea} disabled={exploring}>
+            {exploring ? 'Searching…' : '🔎 Search this area'}
+          </button>
+        )}
+
         {selected && (
           <div className="map-detail">
             <span className="map-detail-emoji">{selected.rec.emoji}</span>
@@ -182,19 +223,19 @@ export default function TripMap({
               <strong>{selected.rec.title}</strong>
               <span className="map-detail-meta">
                 {INTEREST_META[selected.rec.category].label}
-                {selected.rec.rating ? ` · ${selected.rec.rating.toFixed(1)}★` : ''}
+                {selected.rec.rating ? ` · ⭐ ${selected.rec.rating.toFixed(1)}` : ''}
+                {selected.rec.ratingCount ? ` (${selected.rec.ratingCount.toLocaleString()})` : ''}
+                {selected.rec.budgetTier ? ` · ${'$'.repeat(selected.rec.budgetTier)}` : ''}
               </span>
-              {!selected.inPool && <span className="map-detail-tag new">New find — not in your ideas yet</span>}
+              {!selected.inPool && <span className="map-detail-tag new">Found on the map — not in your trip yet</span>}
             </div>
             <div className="map-detail-actions">
-              <button className="btn" onClick={() => importAndPlan(selected.rec, true)}>
+              <button className="btn" onClick={() => act(selected.rec, 'plan')}>
                 ＋ Plan it
               </button>
-              {!selected.inPool && (
-                <button className="btn ghost" onClick={() => importAndPlan(selected.rec, false)}>
-                  Save for later
-                </button>
-              )}
+              <button className="btn ghost" onClick={() => act(selected.rec, 'shortlist')}>
+                ❤️ Shortlist
+              </button>
               {selected.rec.googleUrl && (
                 <a className="btn ghost" href={selected.rec.googleUrl} target="_blank" rel="noreferrer">
                   📍 Maps

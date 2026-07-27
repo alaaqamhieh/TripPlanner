@@ -296,6 +296,7 @@ export default function TripView({
           showToast={showToast}
           onImport={(rec) => updateTrip((prev) => ({ ...prev, pool: [...prev.pool, rec] }))}
           onPlan={(recId) => setModal({ kind: 'addToDay', recId })}
+          onShortlist={shortlistPlace}
         />
       </main>
 

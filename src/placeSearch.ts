@@ -87,6 +87,40 @@ export function placePhotoUrl(photoName: string, maxPx = 800): string {
   return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxPx}&key=${getGoogleKey()}`
 }
 
+const PLACE_FIELD_MASK =
+  'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.rating,places.userRatingCount,places.googleMapsUri,places.editorialSummary,places.photos'
+
+/** Map one Google place to a pool-ready RecommendationItem. */
+function toRec(p: GooglePlace, where: string, category?: InterestId): RecommendationItem {
+  const name = p.displayName?.text ?? 'Unknown place'
+  const types = p.types ?? (p.primaryType ? [p.primaryType] : [])
+  const parts = (p.formattedAddress ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  const cat = category ?? guessCategory(types)
+  const photoName = p.photos?.[0]?.name
+  return {
+    id: `pl-${p.id ?? name.toLowerCase().replace(/\W+/g, '-')}`,
+    source: 'places',
+    title: name,
+    emoji: smartEmoji(types),
+    category: cat,
+    description:
+      p.editorialSummary?.text ??
+      [titleCase(p.primaryType ?? types[0] ?? 'Place'), parts[1] ?? parts[0]].filter(Boolean).join(' · '),
+    budgetTier: p.priceLevel ? GOOGLE_PRICE[p.priceLevel] : undefined,
+    meal: cat === 'food' ? guessMeal(types) : undefined,
+    coords:
+      p.location?.latitude !== undefined && p.location?.longitude !== undefined
+        ? ([p.location.latitude, p.location.longitude] as [number, number])
+        : undefined,
+    rating: p.rating,
+    ratingCount: p.userRatingCount,
+    googleUrl:
+      p.googleMapsUri ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${where}`)}`,
+    photo: photoName ? placePhotoUrl(photoName) : undefined,
+    wikiTitle: name,
+  }
+}
+
 /**
  * Search Google Places for `query` in `destination` and map results straight
  * into pool-ready RecommendationItems. Throws on a non-OK response.
@@ -98,40 +132,138 @@ export async function searchPlaces(query: string, destination: string, category?
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': getGoogleKey(),
-      'X-Goog-FieldMask':
-        'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.rating,places.userRatingCount,places.googleMapsUri,places.editorialSummary,places.photos',
+      'X-Goog-FieldMask': PLACE_FIELD_MASK,
     },
     body: JSON.stringify({ textQuery: where ? `${query} in ${where}` : query, maxResultCount: 8 }),
   })
   if (!res.ok) throw new Error(`Search failed (${res.status})`)
   const data = (await res.json()) as { places?: GooglePlace[] }
-  return (data.places ?? []).map((p) => {
-    const name = p.displayName?.text ?? 'Unknown place'
-    const types = p.types ?? (p.primaryType ? [p.primaryType] : [])
-    const parts = (p.formattedAddress ?? '').split(',').map((s) => s.trim()).filter(Boolean)
-    const cat = category ?? guessCategory(types)
-    const photoName = p.photos?.[0]?.name
-    return {
-      id: `pl-${p.id ?? name.toLowerCase().replace(/\W+/g, '-')}`,
-      source: 'places' as const,
-      title: name,
-      emoji: smartEmoji(types),
-      category: cat,
-      description:
-        p.editorialSummary?.text ??
-        [titleCase(p.primaryType ?? types[0] ?? 'Place'), parts[1] ?? parts[0]].filter(Boolean).join(' · '),
-      budgetTier: p.priceLevel ? GOOGLE_PRICE[p.priceLevel] : undefined,
-      meal: cat === 'food' ? guessMeal(types) : undefined,
-      coords:
-        p.location?.latitude !== undefined && p.location?.longitude !== undefined
-          ? ([p.location.latitude, p.location.longitude] as [number, number])
-          : undefined,
-      rating: p.rating,
-      ratingCount: p.userRatingCount,
-      googleUrl:
-        p.googleMapsUri ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${where}`)}`,
-      photo: photoName ? placePhotoUrl(photoName) : undefined,
-      wikiTitle: name,
+  return (data.places ?? []).map((p) => toRec(p, where, category))
+}
+
+/** Look up the coordinates of a place/destination name. Returns null if none. */
+export async function geocode(query: string): Promise<[number, number] | null> {
+  const q = query.trim()
+  if (!q) return null
+  try {
+    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': getGoogleKey(),
+        'X-Goog-FieldMask': 'places.location',
+      },
+      body: JSON.stringify({ textQuery: q, maxResultCount: 1 }),
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as { places?: GooglePlace[] }
+    const loc = data.places?.[0]?.location
+    if (loc?.latitude === undefined || loc?.longitude === undefined) return null
+    return [loc.latitude, loc.longitude]
+  } catch {
+    return null
+  }
+}
+
+/** Google Places (New) type strings to include per explore category. */
+const EXPLORE_TYPES: Record<InterestId | 'all', string[]> = {
+  all: ['tourist_attraction'],
+  food: ['restaurant', 'cafe'],
+  history: ['tourist_attraction', 'church', 'mosque', 'hindu_temple', 'synagogue'],
+  museums: ['museum', 'art_gallery'],
+  nature: ['park', 'national_park', 'garden'],
+  nightlife: ['bar', 'night_club'],
+  shopping: ['shopping_mall', 'market'],
+  adventure: ['amusement_park', 'tourist_attraction'],
+  beaches: ['tourist_attraction'],
+  family: ['amusement_park', 'zoo', 'aquarium', 'park'],
+  wellness: ['spa'],
+}
+
+/** A biased-text query to fall back on when a type search returns nothing. */
+const EXPLORE_TEXT: Record<InterestId | 'all', string> = {
+  all: 'top attractions',
+  food: 'best restaurants',
+  history: 'historic landmarks',
+  museums: 'best museums',
+  nature: 'best parks and nature',
+  nightlife: 'best bars and nightlife',
+  shopping: 'best shopping and markets',
+  adventure: 'adventure activities',
+  beaches: 'best beaches',
+  family: 'family attractions',
+  wellness: 'best spas',
+}
+
+/**
+ * Discover the most popular, well-reviewed places around a map point. Uses
+ * Places "Nearby Search (New)" ranked by popularity; falls back to a
+ * location-biased text search if the type search yields nothing. Results are
+ * filtered to "verified" spots (a real rating backed by enough reviews) and
+ * sorted by a rating × popularity score — the best-of-the-area, on the map.
+ */
+export async function exploreArea(
+  center: [number, number],
+  radiusMeters: number,
+  category: InterestId | 'all',
+): Promise<RecommendationItem[]> {
+  const radius = Math.max(500, Math.min(50000, Math.round(radiusMeters)))
+  const [latitude, longitude] = center
+  let places: GooglePlace[] = []
+
+  try {
+    const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': getGoogleKey(),
+        'X-Goog-FieldMask': PLACE_FIELD_MASK,
+      },
+      body: JSON.stringify({
+        includedTypes: EXPLORE_TYPES[category],
+        maxResultCount: 20,
+        rankPreference: 'POPULARITY',
+        locationRestriction: { circle: { center: { latitude, longitude }, radius } },
+      }),
+    })
+    if (res.ok) {
+      const data = (await res.json()) as { places?: GooglePlace[] }
+      places = data.places ?? []
     }
-  })
+  } catch {
+    // fall through to the text fallback
+  }
+
+  if (!places.length) {
+    try {
+      const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': getGoogleKey(),
+          'X-Goog-FieldMask': PLACE_FIELD_MASK,
+        },
+        body: JSON.stringify({
+          textQuery: EXPLORE_TEXT[category],
+          maxResultCount: 20,
+          rankPreference: 'RELEVANCE',
+          locationBias: { circle: { center: { latitude, longitude }, radius } },
+        }),
+      })
+      if (res.ok) {
+        const data = (await res.json()) as { places?: GooglePlace[] }
+        places = data.places ?? []
+      }
+    } catch {
+      // give up quietly
+    }
+  }
+
+  const cat = category === 'all' ? undefined : category
+  return places
+    .map((p) => toRec(p, '', cat))
+    // "Verified / most recommended": a real rating backed by a meaningful number of reviews.
+    .filter((r) => r.coords && (r.rating ?? 0) >= 4 && (r.ratingCount ?? 0) >= 30)
+    .sort((a, b) => (b.rating ?? 0) * Math.log10((b.ratingCount ?? 1) + 10) - (a.rating ?? 0) * Math.log10((a.ratingCount ?? 1) + 10))
+    .slice(0, 18)
 }
