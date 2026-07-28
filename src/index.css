@@ -1662,6 +1662,35 @@ a.mini-btn { text-decoration: none; display: inline-flex; align-items: center; }
   0%, 100% { box-shadow: 0 3px 8px rgba(20, 10, 5, 0.3), 0 0 0 0 color-mix(in srgb, var(--coral) 60%, transparent); }
   50% { box-shadow: 0 3px 8px rgba(20, 10, 5, 0.3), 0 0 0 8px color-mix(in srgb, var(--coral) 0%, transparent); }
 }
+.map-pin.route {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--route-color, var(--accent));
+  border: 2px solid #fff;
+  border-radius: 50%;
+  animation: none;
+}
+
+/* Day-route selector + summary above the map */
+.map-routes { margin: 10px 0 2px; }
+.chip.route-chip {
+  border-color: color-mix(in srgb, var(--route-color, var(--accent)) 55%, var(--line));
+}
+.chip.route-chip.on {
+  background: var(--route-color, var(--accent));
+  border-color: var(--route-color, var(--accent));
+  color: #fff;
+}
+.route-summary { font-weight: 700; color: var(--text-soft); margin-top: 6px; }
+
+/* Per-day walking-time line on the day cards */
+.day-route {
+  margin: 2px 0 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
 
 .leaflet-popup-content { font-family: inherit; font-size: 0.88rem; line-height: 1.45; }
 .leaflet-popup-content a { color: var(--coral); font-weight: 700; }

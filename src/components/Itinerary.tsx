@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { dayLabel, dayOfMonth, formatTime12h, tripDates, tripWeeks, WEEKDAY_LABELS } from '../dateUtils'
-import { resolveItem, sortDayItems } from '../tripUtils'
+import { dayStops, resolveItem, routeLabel, sortDayItems, walkStats } from '../tripUtils'
 import type { ScheduledItem, TripState } from '../types'
 import { DragItem } from './DragItem'
 
@@ -202,6 +202,10 @@ export default function Itinerary({
                   ＋
                 </button>
               </div>
+              {(() => {
+                const stats = walkStats(dayStops(trip, date))
+                return stats ? <p className="day-route">🚶 {routeLabel(stats)}</p> : null
+              })()}
               {dayBody(date)}
             </div>
           ))}

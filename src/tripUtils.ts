@@ -42,6 +42,55 @@ export function scheduledRefIds(trip: TripState): Set<string> {
   return ids
 }
 
+// --- Day routes & walking-time estimates ------------------------------------
+
+export interface RouteStop {
+  title: string
+  emoji: string
+  category: string
+  coords: [number, number]
+}
+
+/** A day's located, scheduled stops in visiting order (only ones with coords). */
+export function dayStops(trip: TripState, date: string): RouteStop[] {
+  const items = sortDayItems(trip.scheduled.filter((s) => s.date === date))
+  const stops: RouteStop[] = []
+  for (const item of items) {
+    const resolved = resolveItem(item, trip.pool)
+    const coords = resolved.rec?.coords
+    if (coords) stops.push({ title: resolved.title, emoji: resolved.emoji, category: resolved.rec?.category ?? 'history', coords })
+  }
+  return stops
+}
+
+/** Great-circle distance between two [lat,lng] points, in km. */
+export function haversineKm(a: [number, number], b: [number, number]): number {
+  const R = 6371
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(b[0] - a[0])
+  const dLng = toRad(b[1] - a[1])
+  const lat1 = toRad(a[0])
+  const lat2 = toRad(b[0])
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+/** Total straight-line distance along a day's stops + a rough walking time. */
+export function walkStats(stops: RouteStop[]): { km: number; minutes: number } | null {
+  if (stops.length < 2) return null
+  let km = 0
+  for (let i = 1; i < stops.length; i++) km += haversineKm(stops[i - 1].coords, stops[i].coords)
+  // ~4.5 km/h walking, +25% for real streets vs straight lines.
+  const minutes = Math.round(((km * 1.25) / 4.5) * 60)
+  return { km: Math.round(km * 10) / 10, minutes }
+}
+
+/** "~4.2 km · ~18 min walking" style label for a day. */
+export function routeLabel(stats: { km: number; minutes: number }): string {
+  const time = stats.minutes >= 60 ? `${Math.floor(stats.minutes / 60)}h ${stats.minutes % 60}m` : `${stats.minutes} min`
+  return `~${stats.km} km · ~${time} walking between stops`
+}
+
 let seq = 0
 export function newItemId(): string {
   seq += 1
