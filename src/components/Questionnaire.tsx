@@ -219,14 +219,12 @@ export default function Questionnaire({
     )
   }
 
-  const stepNo = `Question ${stepIdx + 1} of ${STEP_ORDER.length}`
-
   return (
     <div className="quiz">
       <QuizTop progress={progress} onBack={back} onQuit={onQuit} />
 
       {stepId === 'destination' && (
-        <StepFrame kicker={stepNo} title="Where are you dreaming of going?" sub="City, country, island — anywhere.">
+        <StepFrame number={stepIdx + 1} title="Where are you dreaming of going?" sub="City, country, island — anywhere.">
           <input
             className="quiz-input"
             autoFocus
@@ -251,7 +249,7 @@ export default function Questionnaire({
       )}
 
       {stepId === 'dates' && (
-        <StepFrame kicker={stepNo} title="When's the getaway?" sub="Not sure yet? Skip it — we'll pencil in a 5-day trip next month you can change anytime.">
+        <StepFrame number={stepIdx + 1} title="When's the getaway?" sub="Not sure yet? Skip it — we'll pencil in a 5-day trip next month you can change anytime.">
           <div className="quiz-dates">
             <div className="field">
               <label htmlFor="q-start">First day</label>
@@ -278,7 +276,7 @@ export default function Questionnaire({
       )}
 
       {stepId === 'party' && (
-        <StepFrame kicker={stepNo} title="Who's coming with you?">
+        <StepFrame number={stepIdx + 1} title="Who's coming with you?">
           <SingleChoice
             options={PARTY_OPTIONS}
             value={draft.party}
@@ -292,14 +290,14 @@ export default function Questionnaire({
       )}
 
       {stepId === 'budget' && (
-        <StepFrame kicker={stepNo} title="How do you feel about spending on this trip?">
+        <StepFrame number={stepIdx + 1} title="How do you feel about spending on this trip?">
           <SingleChoice options={BUDGET_OPTIONS} value={draft.budget} onPick={(v) => pickAndAdvance('budget', v)} />
           <StepNav onSkip={advance} />
         </StepFrame>
       )}
 
       {stepId === 'pace' && (
-        <StepFrame kicker={stepNo} title="Be honest — what does your perfect trip day look like?">
+        <StepFrame number={stepIdx + 1} title="Be honest — what does your perfect trip day look like?">
           <SingleChoice options={PACE_OPTIONS} value={draft.pace} onPick={(v) => pickAndAdvance('pace', v)} />
           <StepNav onSkip={advance} />
         </StepFrame>
@@ -325,18 +323,19 @@ export default function Questionnaire({
       )}
 
       {stepId === 'foodAdventure' && (
-        <StepFrame kicker={stepNo} title="At dinner abroad — who are you?">
+        <StepFrame number={stepIdx + 1} title="At dinner abroad — who are you?">
           <SingleChoice options={FOOD_OPTIONS} value={draft.foodAdventure} onPick={(v) => pickAndAdvance('foodAdventure', v)} />
           <StepNav onSkip={advance} />
         </StepFrame>
       )}
 
       {stepId === 'diet' && (
-        <StepFrame kicker={stepNo} title="Anything the food plans must respect?" sub="Pick all that apply — or skip if you eat everything.">
+        <StepFrame number={stepIdx + 1} title="Anything the food plans must respect?" sub="Pick all that apply — or skip if you eat everything.">
           <MultiChoice
             compact
             options={DIET_OPTIONS}
             values={draft.diet ?? []}
+            onEnter={advance}
             onToggle={(v) => {
               const need = v as (typeof DIET_OPTIONS)[number]['value']
               const current = draft.diet ?? []
@@ -349,7 +348,7 @@ export default function Questionnaire({
 
       {stepId === 'mustHaves' && (
         <StepFrame
-          kicker={stepNo}
+          number={stepIdx + 1}
           title="What would you be sad to fly home without doing?"
           sub="Pick your non-negotiables — they get priority in your plan."
         >
@@ -357,6 +356,7 @@ export default function Questionnaire({
             compact
             options={MUST_HAVE_TAGS}
             values={draft.mustHaves ?? []}
+            onEnter={advance}
             onToggle={(v) =>
               set({
                 mustHaves: (draft.mustHaves ?? []).includes(v)
@@ -370,14 +370,14 @@ export default function Questionnaire({
       )}
 
       {stepId === 'style' && (
-        <StepFrame kicker={stepNo} title="How do you like your plans?">
+        <StepFrame number={stepIdx + 1} title="How do you like your plans?">
           <SingleChoice options={STYLE_OPTIONS} value={draft.style} onPick={(v) => pickAndAdvance('style', v)} />
           <StepNav onSkip={advance} />
         </StepFrame>
       )}
 
       {stepId === 'rhythm' && (
-        <StepFrame kicker={stepNo} title="Sunrise or 2am — when are you at your best?">
+        <StepFrame number={stepIdx + 1} title="Sunrise or 2am — when are you at your best?">
           <SingleChoice options={RHYTHM_OPTIONS} value={draft.rhythm} onPick={(v) => pickAndAdvance('rhythm', v)} />
           <StepNav onSkip={advance} skipLabel="Skip →" />
         </StepFrame>
@@ -397,17 +397,25 @@ export default function Questionnaire({
 
 function QuizTop({ progress, onBack, onQuit }: { progress: number; onBack: () => void; onQuit: () => void }) {
   return (
-    <div className="quiz-top">
-      <button className="quiz-back" onClick={onBack}>
-        ← Back
-      </button>
-      <div className="quiz-progress" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100}>
+    <>
+      <div className="quiz-top">
+        <button className="quiz-back" onClick={onBack}>
+          ← Back
+        </button>
+        <button className="quiz-back quiz-quit" onClick={onQuit} aria-label="Exit questionnaire">
+          ✕
+        </button>
+      </div>
+      <div
+        className="quiz-progress"
+        role="progressbar"
+        aria-valuenow={Math.round(progress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div className="quiz-progress-fill" style={{ width: `${progress}%` }} />
       </div>
-      <button className="quiz-back quiz-quit" onClick={onQuit} aria-label="Exit questionnaire">
-        ✕
-      </button>
-    </div>
+    </>
   )
 }
 
@@ -427,9 +435,16 @@ function StepNav({
   return (
     <div className="quiz-nav">
       {nextLabel && onNext && (
-        <button className="btn" onClick={onNext} disabled={nextDisabled}>
-          {nextLabel}
-        </button>
+        <span className="quiz-next">
+          <button className="btn quiz-ok" onClick={onNext} disabled={nextDisabled}>
+            {nextLabel}
+          </button>
+          {!nextDisabled && (
+            <span className="quiz-enter-hint">
+              press <kbd>Enter ↵</kbd>
+            </span>
+          )}
+        </span>
       )}
       <button className="quiz-skip" onClick={onSkip}>
         {skipLabel}

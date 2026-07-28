@@ -89,6 +89,13 @@ body {
 }
 
 h1, h2, h3 { line-height: 1.15; margin: 0; font-family: var(--serif); }
+
+/* Calm, consistent keyboard-focus ring across the app (low specificity so
+   components with their own focus styles still win). */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline-offset: 2px;
+}
 button { font: inherit; cursor: pointer; }
 input, textarea, select { font: inherit; }
 
@@ -242,11 +249,17 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   color: var(--accent);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.22em;
-  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
 }
 
-.section-title { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; margin-top: 6px; }
+.section-title {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 6px;
+}
 .section-sub { color: var(--text-soft); margin: 8px 0 0; max-width: 640px; }
 
 .reveal {
@@ -304,8 +317,8 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   box-shadow: var(--shadow);
   transition: transform 0.2s var(--ease-spring), box-shadow 0.2s;
 }
-.btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: var(--shadow-lift); }
-.btn:active { transform: scale(0.97); }
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+.btn:active { transform: translateY(0) scale(0.98); }
 .btn.ghost {
   background: transparent;
   color: var(--accent);
@@ -531,9 +544,9 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  max-width: 720px;
+  max-width: 660px;
   margin: 0 auto;
-  padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: 22px 24px calc(40px + env(safe-area-inset-bottom, 0px));
 }
 
 .quiz-top { display: flex; align-items: center; gap: 12px; }
@@ -541,27 +554,29 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   border: none;
   background: none;
   color: var(--text-soft);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   padding: 6px 10px;
   border-radius: 999px;
-  transition: background-color 0.2s, transform 0.2s var(--ease-spring);
+  transition: background-color 0.2s, transform 0.2s var(--ease-spring), color 0.2s;
 }
-.quiz-back:hover { background: var(--bg-sunken); transform: translateX(-2px); }
+.quiz-back:hover { background: var(--bg-sunken); color: var(--text); transform: translateX(-2px); }
 .quiz-quit { margin-left: auto; }
 
+/* Thin Typeform-style progress rail pinned to the bottom edge of the screen. */
 .quiz-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
   background: var(--bg-sunken);
-  border-radius: 999px;
-  height: 8px;
-  overflow: hidden;
-  flex: 1;
+  z-index: 5;
 }
 .quiz-progress-fill {
   height: 100%;
-  border-radius: 999px;
   background: linear-gradient(90deg, var(--teal-soft), var(--accent));
-  transition: width 0.5s var(--ease-spring);
+  transition: width 0.55s var(--ease-spring);
 }
 
 .quiz-step {
@@ -569,27 +584,49 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 28px 0;
-  animation: step-in 0.45s var(--ease-spring) both;
+  padding: 32px 0;
+  animation: step-in 0.5s var(--ease-spring) both;
 }
 
+/* Each question slides gently up into place — the Typeform feel. */
 @keyframes step-in {
-  from { opacity: 0; transform: translateX(34px); }
+  from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: none; }
 }
 
+/* Numbered marker: "1 →" in the accent, like Typeform's question index. */
+.quiz-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0 0 6px;
+}
+.quiz-num-arrow { opacity: 0.75; }
+
 .quiz-kicker {
   color: var(--accent);
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   font-size: 0.72rem;
+  margin: 0 0 6px;
 }
-.quiz-title { font-size: clamp(1.5rem, 5vw, 2.1rem); font-weight: 700; margin: 8px 0 4px; }
-.quiz-sub { color: var(--text-soft); margin: 0 0 22px; }
+.quiz-title {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 4.6vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
+  margin: 0 0 10px;
+}
+.quiz-sub { color: var(--text-soft); font-size: 1.05rem; margin: 0 0 26px; max-width: 46ch; }
 
-.opt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-.opt-grid.compact { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+/* Full-width, letter-key option rows — the signature Typeform list. */
+.opt-grid { display: flex; flex-direction: column; gap: 10px; max-width: 540px; }
+.opt-grid.compact { gap: 8px; }
 
 .opt-card {
   display: flex;
@@ -597,69 +634,94 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   gap: 12px;
   text-align: left;
   background: var(--bg-raised);
-  border: 2px solid var(--line);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  box-shadow: var(--shadow);
-  transition: transform 0.2s var(--ease-spring), border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 13px 14px;
+  transition: border-color 0.18s, background-color 0.18s, transform 0.18s var(--ease-spring);
 }
-/* Cards that carry a description read best top-aligned so the emoji sits by the title. */
-.opt-card:has(.opt-hint) { align-items: flex-start; }
-.opt-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.opt-card:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); transform: translateY(-1px); }
 .opt-card.on {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--bg-raised));
-  animation: opt-pop 0.4s var(--ease-spring);
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-raised));
 }
 .opt-card.loved {
   border-color: var(--coral);
   background: color-mix(in srgb, var(--coral) 9%, var(--bg-raised));
 }
 
-@keyframes opt-pop {
-  0% { transform: scale(0.94); }
-  60% { transform: scale(1.04); }
-  100% { transform: scale(1); }
+/* Letter key badge (A/B/C…) — fills with the accent once the row is chosen. */
+.opt-key {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--line);
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-soft);
+  background: var(--bg-sunken);
+  transition: background-color 0.18s, color 0.18s, border-color 0.18s;
 }
+.opt-card:hover .opt-key { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.opt-card.on .opt-key { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.opt-card.loved .opt-key { background: var(--coral); border-color: var(--coral); color: #fff; }
 
-.opt-emoji { font-size: 1.9rem; line-height: 1.05; flex: 0 0 auto; }
-/* Stack the label above its description (they are inline spans by default). */
+.opt-emoji { font-size: 1.4rem; line-height: 1.05; flex: 0 0 auto; }
 .opt-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
-.opt-label { display: block; font-weight: 800; font-size: 0.98rem; line-height: 1.25; }
+.opt-label { display: block; font-weight: 700; font-size: 0.98rem; line-height: 1.3; }
 .opt-hint { display: block; color: var(--text-soft); font-size: 0.82rem; line-height: 1.35; }
-.opt-level {
+.opt-check {
   align-self: center;
   margin-left: auto;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--accent);
   flex: 0 0 auto;
 }
+.opt-card.loved .opt-check { color: var(--coral); }
 
-.quiz-nav { display: flex; align-items: center; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
+.quiz-nav { display: flex; align-items: center; gap: 16px; margin-top: 28px; flex-wrap: wrap; }
+.quiz-next { display: inline-flex; align-items: center; gap: 12px; }
+.quiz-ok { padding: 11px 26px; font-size: 1rem; }
+.quiz-enter-hint { color: var(--text-soft); font-size: 0.82rem; }
+.quiz-enter-hint kbd {
+  font-family: var(--sans);
+  font-weight: 700;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.78rem;
+}
 .quiz-skip {
   border: none;
   background: none;
   color: var(--text-soft);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   padding: 8px 12px;
   border-radius: 999px;
 }
-.quiz-skip:hover { background: var(--bg-sunken); }
+.quiz-skip:hover { background: var(--bg-sunken); color: var(--text); }
 
 .quiz-input {
   width: 100%;
-  border: 2px solid var(--line);
-  border-radius: var(--radius);
-  padding: 14px 18px;
-  font-size: 1.15rem;
-  background: var(--bg-raised);
+  max-width: 540px;
+  border: none;
+  border-bottom: 2px solid var(--line);
+  border-radius: 0;
+  padding: 10px 2px;
+  font-size: 1.5rem;
+  font-family: var(--serif);
+  background: transparent;
   color: var(--text);
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s;
 }
-.quiz-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.quiz-input::placeholder { color: var(--text-soft); opacity: 0.55; }
+.quiz-input:focus { border-bottom-color: var(--accent); }
 
 .quiz-dates { display: flex; gap: 12px; flex-wrap: wrap; }
 .quiz-dates .field { flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px; }
@@ -1760,7 +1822,6 @@ footer {
   .count-cell { min-width: 72px; padding: 10px 12px; }
   section { padding: 44px 0 20px; }
   .timeline { padding-left: 26px; }
-  .opt-grid { grid-template-columns: 1fr 1fr; }
-  .opt-grid:not(.compact) { grid-template-columns: 1fr; }
+  .opt-grid { max-width: none; }
   .rf-card { padding: 26px 20px; }
 }
