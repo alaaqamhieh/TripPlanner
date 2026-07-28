@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import type { ChoiceOption } from '../questionnaire/steps'
+import { Icon } from './Icon'
 
 // Shared building blocks for the (Typeform-style) questionnaire: the framed
 // step layout, single-choice option rows (letter-key selectable, auto-advance),
@@ -75,6 +76,7 @@ export function SingleChoice<V extends string | number>({
           onClick={() => onPick(opt.value)}
         >
           <span className="opt-key" aria-hidden="true">{keyOf(i)}</span>
+          {opt.icon && <Icon name={opt.icon} className="opt-icon" />}
           <span className="opt-body">
             <span className="opt-label">{opt.label}</span>
             {opt.hint && <span className="opt-hint">{opt.hint}</span>}
@@ -128,6 +130,7 @@ export function MultiChoice({
         return (
           <button key={opt.value} className={`opt-card${on ? ' on' : ''}`} onClick={() => onToggle(opt.value)}>
             <span className="opt-key" aria-hidden="true">{keyOf(i)}</span>
+            {opt.icon && <Icon name={opt.icon} className="opt-icon" />}
             <span className="opt-body">
               <span className="opt-label">{opt.label}</span>
               {opt.hint && <span className="opt-hint">{opt.hint}</span>}

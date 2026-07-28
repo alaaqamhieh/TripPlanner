@@ -43,8 +43,10 @@ export function buildQueries(profile: TravelerProfile): { query: string; categor
     ]
     out.push({ query: `best ${dietWord} restaurants`, category: 'food' })
   }
-  if (profile.mustHaves.includes('sunset')) out.push({ query: 'best sunset viewpoint', category: 'nature' })
-  if (profile.mustHaves.includes('cafes')) out.push({ query: 'best specialty coffee cafes', category: 'food' })
+  if (profile.mustHaves.includes('sunset')) out.push({ query: 'best scenic viewpoint or sunset spot', category: 'nature' })
+  if (profile.mustHaves.includes('cafes')) out.push({ query: 'most famous local restaurant or iconic dish', category: 'food' })
+  if (profile.mustHaves.includes('landmark')) out.push({ query: 'most famous landmark', category: 'history' })
+  if (profile.mustHaves.includes('market')) out.push({ query: 'best local market', category: 'shopping' })
 
   return out.slice(0, 10)
 }

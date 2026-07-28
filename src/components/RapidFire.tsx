@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { INTEREST_META, type InterestId, type InterestLevel } from '../types'
 import type { RapidFireCard } from '../questionnaire/steps'
+import { Icon } from './Icon'
 
 // The rapid-fire preference deck: one vivid, personal question per card.
 // Love it ❤️ / Could be nice 🙂 / Not for me 🙅 → interest weights 2 / 1 / 0.
@@ -53,6 +54,7 @@ export default function RapidFire({
         className={`rf-card${leaving ? ` out-${leaving}` : ''}`}
         style={{ ['--rf-accent' as string]: accent }}
       >
+        <Icon name={card.icon} className="rf-icon" />
         <p className="rf-q">{card.question}</p>
       </div>
       <div className="rf-actions">
