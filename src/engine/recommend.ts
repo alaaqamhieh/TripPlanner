@@ -57,7 +57,7 @@ export function scoreRec(rec: RecommendationItem, profile: TravelerProfile): Sco
   if (profile.rhythm === 'early' && rec.timeOfDay === 'morning') score += 0.5
 
   // Real places with good ratings edge out their generic template twins.
-  if (rec.source === 'places') {
+  if (rec.source === 'places' || rec.source === 'research') {
     score += 0.5 + (rec.rating ?? 3.5) / 5
     if ((rec.rating ?? 0) >= 4.5) why.push(`rated ${rec.rating}★`)
   }

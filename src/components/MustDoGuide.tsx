@@ -23,6 +23,7 @@ function GuideCard({
   shortlisted,
   onPlan,
   onShortlist,
+  onOpen,
 }: {
   rec: RecommendationItem
   destination: string
@@ -30,20 +31,28 @@ function GuideCard({
   shortlisted: boolean
   onPlan: () => void
   onShortlist: () => void
+  onOpen: () => void
 }) {
   const accent = `var(${INTEREST_META[rec.category].cssVar})`
   const buzz = buzzLine(rec)
   return (
     <article className="guide-card" style={{ ['--card-accent' as string]: accent }}>
-      <div className="guide-card-photo">
+      <button className="guide-card-photo" onClick={onOpen} aria-label={`More about ${rec.title}`}>
         <PlacePhoto rec={rec} destination={destination} />
         {buzz && <span className="guide-card-buzz">{buzz}</span>}
-      </div>
+      </button>
       <div className="guide-card-body">
         <h4 className="guide-card-title">
-          {rec.emoji} {rec.title}
+          <button className="guide-card-titlebtn" onClick={onOpen}>
+            {rec.emoji} {rec.title}
+          </button>
         </h4>
         <p className="guide-card-desc">{rec.description}</p>
+        {rec.sourceUrl && (
+          <a className="guide-card-source" href={rec.sourceUrl} target="_blank" rel="noreferrer">
+            🔗 {rec.sourceLabel || 'Why locals love it'}
+          </a>
+        )}
         <div className="guide-card-actions">
           {planned ? (
             <span className="mini-btn is-planned" aria-disabled="true">
@@ -77,6 +86,7 @@ export default function MustDoGuide({
   trip,
   onPlan,
   onShortlist,
+  onOpen,
   onResearch,
   researching,
   placesAvailable,
@@ -84,6 +94,7 @@ export default function MustDoGuide({
   trip: TripState
   onPlan: (recId: string) => void
   onShortlist: (recId: string) => void
+  onOpen: (recId: string) => void
   onResearch: () => void
   researching: boolean
   placesAvailable: boolean
@@ -163,6 +174,7 @@ export default function MustDoGuide({
                 shortlisted={shortlistIds.has(rec.id)}
                 onPlan={() => onPlan(rec.id)}
                 onShortlist={() => onShortlist(rec.id)}
+                onOpen={() => onOpen(rec.id)}
               />
             ))}
           </div>

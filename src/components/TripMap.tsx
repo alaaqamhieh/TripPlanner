@@ -27,12 +27,14 @@ export default function TripMap({
   onPlan,
   onShortlist,
   onImport,
+  onOpen,
   showToast,
 }: {
   trip: TripState
   onPlan: (recId: string) => void
   onShortlist: (recId: string) => void
   onImport: (rec: RecommendationItem) => void
+  onOpen: (recId: string) => void
   showToast: (msg: string) => void
 }) {
   const mapEl = useRef<HTMLDivElement | null>(null)
@@ -151,8 +153,13 @@ export default function TripMap({
     }
   }
 
-  const act = (rec: RecommendationItem, how: 'plan' | 'shortlist') => {
+  const act = (rec: RecommendationItem, how: 'plan' | 'shortlist' | 'open') => {
     if (!trip.pool.some((r) => r.id === rec.id)) onImport(rec)
+    if (how === 'open') {
+      setSelected(null)
+      onOpen(rec.id)
+      return
+    }
     setSelected(null)
     if (how === 'plan') onPlan(rec.id)
     else {
@@ -232,6 +239,9 @@ export default function TripMap({
             <div className="map-detail-actions">
               <button className="btn" onClick={() => act(selected.rec, 'plan')}>
                 ＋ Plan it
+              </button>
+              <button className="btn ghost" onClick={() => act(selected.rec, 'open')}>
+                ℹ️ Details
               </button>
               <button className="btn ghost" onClick={() => act(selected.rec, 'shortlist')}>
                 ❤️ Shortlist

@@ -72,6 +72,18 @@ interface GooglePlace {
   googleMapsUri?: string
   editorialSummary?: { text?: string }
   photos?: { name?: string }[]
+  regularOpeningHours?: { openNow?: boolean; weekdayDescriptions?: string[] }
+  websiteUri?: string
+  nationalPhoneNumber?: string
+}
+
+/** Extra details lazily fetched for the place-detail sheet. */
+export interface PlaceDetails {
+  hours?: string[]
+  openNow?: boolean
+  website?: string
+  phone?: string
+  photos?: string[]
 }
 
 const GOOGLE_PRICE: Record<string, 1 | 2 | 3> = {
@@ -90,13 +102,41 @@ export function placePhotoUrl(photoName: string, maxPx = 800): string {
 const PLACE_FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.primaryType,places.priceLevel,places.rating,places.userRatingCount,places.googleMapsUri,places.editorialSummary,places.photos'
 
+/**
+ * Fetch opening hours / website / phone / extra photos for one place (Places
+ * Details, New). Returns null on any failure — the sheet still shows what it has.
+ */
+export async function placeDetails(placeId: string): Promise<PlaceDetails | null> {
+  if (!placeId || !getGoogleKey()) return null
+  try {
+    const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+      headers: {
+        'X-Goog-Api-Key': getGoogleKey(),
+        'X-Goog-FieldMask': 'regularOpeningHours,websiteUri,nationalPhoneNumber,photos',
+      },
+    })
+    if (!res.ok) return null
+    const p = (await res.json()) as GooglePlace
+    const photos = (p.photos ?? []).slice(0, 6).map((ph) => (ph.name ? placePhotoUrl(ph.name) : '')).filter(Boolean)
+    return {
+      hours: p.regularOpeningHours?.weekdayDescriptions,
+      openNow: p.regularOpeningHours?.openNow,
+      website: p.websiteUri,
+      phone: p.nationalPhoneNumber,
+      photos: photos.length ? photos : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Map one Google place to a pool-ready RecommendationItem. */
 function toRec(p: GooglePlace, where: string, category?: InterestId): RecommendationItem {
   const name = p.displayName?.text ?? 'Unknown place'
   const types = p.types ?? (p.primaryType ? [p.primaryType] : [])
   const parts = (p.formattedAddress ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   const cat = category ?? guessCategory(types)
-  const photoName = p.photos?.[0]?.name
+  const photoUrls = (p.photos ?? []).slice(0, 5).map((ph) => (ph.name ? placePhotoUrl(ph.name) : '')).filter(Boolean)
   return {
     id: `pl-${p.id ?? name.toLowerCase().replace(/\W+/g, '-')}`,
     source: 'places',
@@ -116,7 +156,10 @@ function toRec(p: GooglePlace, where: string, category?: InterestId): Recommenda
     ratingCount: p.userRatingCount,
     googleUrl:
       p.googleMapsUri ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${where}`)}`,
-    photo: photoName ? placePhotoUrl(photoName) : undefined,
+    photo: photoUrls[0],
+    photos: photoUrls,
+    neighborhood: parts[1] ?? undefined,
+    placeId: p.id,
     wikiTitle: name,
   }
 }

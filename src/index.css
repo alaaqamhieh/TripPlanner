@@ -1014,7 +1014,52 @@ section { padding: 56px 0 24px; scroll-margin-top: 64px; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.guide-card-photo { display: block; width: 100%; border: none; padding: 0; background: none; cursor: pointer; }
+.guide-card-titlebtn { border: none; background: none; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.guide-card-titlebtn:hover { color: var(--accent); }
+.guide-card-source {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+  margin-top: 2px;
+}
+.guide-card-source:hover { text-decoration: underline; }
 .guide-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+
+/* Place detail sheet */
+.place-sheet { max-width: 480px; padding: 0; overflow: hidden; }
+.place-sheet-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(17, 20, 26, 0.55);
+  color: #fff;
+  font-size: 0.9rem;
+  backdrop-filter: blur(3px);
+}
+.place-sheet-photo .place-photo { aspect-ratio: 16 / 10; border-radius: 0; }
+.place-gallery { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
+.place-gallery img { flex: 0 0 82%; aspect-ratio: 16 / 10; object-fit: cover; scroll-snap-align: start; }
+.place-sheet-body { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.place-sheet-title { margin: 0; font-family: var(--serif); font-size: 1.35rem; font-weight: 600; line-height: 1.2; }
+.place-sheet-meta { color: var(--text-soft); font-size: 0.85rem; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.place-open { font-weight: 800; font-size: 0.74rem; padding: 1px 8px; border-radius: 999px; }
+.place-open.yes { background: color-mix(in srgb, var(--cat-nature) 18%, transparent); color: var(--cat-nature); }
+.place-open.no { background: color-mix(in srgb, var(--coral) 16%, transparent); color: var(--coral); }
+.place-sheet-rating { display: flex; align-items: center; gap: 6px; font-size: 0.86rem; font-weight: 700; }
+.place-sheet-why { margin: 0; line-height: 1.5; color: var(--text); }
+.place-source { font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; }
+.place-source:hover { text-decoration: underline; }
+.place-hours-toggle { border: none; background: none; color: var(--text-soft); font-weight: 700; font-size: 0.85rem; padding: 2px 0; }
+.place-hours ul { margin: 4px 0 0; padding-left: 18px; color: var(--text-soft); font-size: 0.82rem; line-height: 1.6; }
+.place-sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.place-sheet-actions .btn { flex: 1 1 auto; justify-content: center; }
 a.mini-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .mini-btn.is-planned { background: var(--bg-sunken); color: var(--text-soft); cursor: default; }
 .mini-btn.is-planned:hover { transform: none; }

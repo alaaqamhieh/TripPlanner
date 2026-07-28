@@ -1,5 +1,6 @@
-import { searchPlaces } from '../placeSearch'
-import type { GuideSection, InterestId, MealSlot, RecommendationItem, TravelerProfile } from '../types'
+import { searchPlaces, smartEmoji } from '../placeSearch'
+import { researchGuide } from '../research'
+import { ALL_INTERESTS, type GuideSection, type InterestId, type MealSlot, type RecommendationItem, type TravelerProfile } from '../types'
 
 // Researches a destination into a "must-see & must-eat" guide of REAL, named,
 // verified places — the spots travelers can't stop talking about. Google Places
@@ -140,4 +141,91 @@ export async function buildGuide(profile: TravelerProfile, destination: string):
   }
 
   return { sections, recs: [...chosen.values()] }
+}
+
+// --- AI + web-search deep research (grounded through Google Places) ----------
+
+const SECTION_MEAL: Record<string, MealSlot | undefined> = {
+  breakfast: 'breakfast',
+  lunch: 'lunch',
+  dinner: 'dinner',
+}
+
+function asCategory(value: string, fallback: InterestId): InterestId {
+  return (ALL_INTERESTS as readonly string[]).includes(value) ? (value as InterestId) : fallback
+}
+
+function slug(text: string): string {
+  return text.toLowerCase().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '')
+}
+
+/**
+ * Research a destination with Claude + live web search (forums, blogs, reviews,
+ * local-language), then ground each named place through Google Places for a
+ * rating, review count, photo and coordinates. Every card is a real, review-
+ * backed place with a "why" and a source link. Throws if research yields
+ * nothing so the caller can fall back to the Places-only guide.
+ */
+export async function buildGuideAI(profile: TravelerProfile, destination: string): Promise<GuideResult> {
+  const where = destination.trim()
+  const research = await researchGuide(profile, where)
+  if (!research.sections.length) return { sections: [], recs: [] }
+
+  // Enrich every named place through Places in parallel (bounded by section size).
+  const seen = new Set<string>()
+  const sections: GuideSection[] = []
+  const recs: RecommendationItem[] = []
+
+  for (const section of research.sections) {
+    const meal = SECTION_MEAL[section.key]
+    const fallbackCat: InterestId = meal ? 'food' : 'history'
+    const enriched = await Promise.all(
+      section.places.slice(0, 8).map(async (place) => {
+        const category = asCategory(place.category, fallbackCat)
+        const query = [place.name, place.neighborhood].filter(Boolean).join(' ')
+        let match: RecommendationItem | undefined
+        try {
+          const results = await searchPlaces(query, where, category)
+          match = results.find((r) => r.coords) ?? results[0]
+        } catch {
+          match = undefined
+        }
+        const rec: RecommendationItem = {
+          id: match?.id ?? `re-${slug(place.name)}`,
+          source: 'research',
+          title: place.name,
+          emoji: match?.emoji ?? smartEmoji([category]),
+          category,
+          description: place.why,
+          neighborhood: place.neighborhood ?? match?.neighborhood,
+          sourceUrl: place.source,
+          sourceLabel: place.sourceLabel,
+          meal: meal ?? match?.meal,
+          coords: match?.coords,
+          rating: match?.rating,
+          ratingCount: match?.ratingCount,
+          budgetTier: match?.budgetTier,
+          googleUrl:
+            match?.googleUrl ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, ${where}`)}`,
+          photo: match?.photo,
+          photos: match?.photos,
+          placeId: match?.placeId,
+          wikiTitle: place.name,
+        }
+        return rec
+      }),
+    )
+
+    const recIds: string[] = []
+    for (const rec of enriched) {
+      const dupKey = rec.title.toLowerCase()
+      if (seen.has(dupKey)) continue
+      seen.add(dupKey)
+      recs.push(rec)
+      recIds.push(rec.id)
+    }
+    if (recIds.length) sections.push({ key: section.key, label: section.label, emoji: section.emoji, recIds })
+  }
+
+  return { sections, recs }
 }

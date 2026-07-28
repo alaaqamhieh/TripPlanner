@@ -88,7 +88,7 @@ export const MEAL_META: Record<MealSlot, { label: string; emoji: string; order: 
 /** One idea in a trip's recommendation pool. */
 export interface RecommendationItem {
   id: string
-  source: 'template' | 'places' | 'signature' | 'ai' | 'custom'
+  source: 'template' | 'places' | 'signature' | 'ai' | 'research' | 'custom'
   title: string
   emoji: string
   category: InterestId
@@ -110,8 +110,24 @@ export interface RecommendationItem {
   googleUrl?: string
   /** A real photo URL for the swipe deck / cards (Places or Wikipedia). */
   photo?: string
+  /** Extra photo URLs for the detail gallery. */
+  photos?: string[]
   /** Wikipedia page title used to lazily resolve a photo when none is set. */
   wikiTitle?: string
+  /** Neighbourhood / area, when known (from research or Places address). */
+  neighborhood?: string
+  /** A citation URL from AI research (Reddit/blog/review/Google) explaining the "why". */
+  sourceUrl?: string
+  /** Human-readable source label for the citation (e.g. "Reddit", "Eater"). */
+  sourceLabel?: string
+  /** Opening-hours lines from Places Details, e.g. ["Mon: 9–5", …]. */
+  hours?: string[]
+  /** Whether the place is open right now (Places Details), when known. */
+  openNow?: boolean
+  website?: string
+  phone?: string
+  /** Google Place id, kept so we can lazily fetch full details. */
+  placeId?: string
 }
 
 /** Something placed on a specific day of the itinerary. */

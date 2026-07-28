@@ -25,7 +25,8 @@ function RecCard({
   const { rec, why } = scored
   const accent = `var(${INTEREST_META[rec.category].cssVar})`
   // Real places (curated, live, or AI) get a photo header; generic ideas stay compact.
-  const hasReal = rec.source === 'places' || rec.source === 'signature' || rec.source === 'ai' || Boolean(rec.photo)
+  const hasReal =
+    rec.source === 'places' || rec.source === 'signature' || rec.source === 'ai' || rec.source === 'research' || Boolean(rec.photo)
   return (
     <DragItem ariaLabel={`${rec.title} — drag onto a day or tap to pick a day`} onChoose={onPlan}>
       <div className={`card${hasReal ? ' card--photo' : ''}`} style={{ ['--card-accent' as string]: accent }}>
@@ -140,7 +141,7 @@ export default function Recommendations({
   // keep templates so the list still has enough to work with.
   const hasReal = useMemo(() => {
     if (trip.guide?.generatedFor) return true
-    const realCount = trip.pool.filter((r) => r.source === 'places' || r.source === 'ai').length
+    const realCount = trip.pool.filter((r) => r.source === 'places' || r.source === 'ai' || r.source === 'research').length
     return realCount >= 6
   }, [trip.pool, trip.guide])
   const ranked = hasReal ? allRanked.filter((s) => s.rec.source !== 'template') : allRanked

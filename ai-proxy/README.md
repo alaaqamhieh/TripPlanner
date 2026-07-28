@@ -1,7 +1,18 @@
 # TripPlanner AI proxy
 
-A tiny Vercel serverless function that lets the static TripPlanner site use
-Claude without exposing an API key in the browser. One route: `POST /api/ai`.
+A tiny Vercel serverless function set that lets the static TripPlanner site use
+Claude without exposing an API key in the browser. Two routes:
+
+- `POST /api/ai` — the in-app assistant (structured trip edits).
+- `POST /api/research` — deep destination research. Runs Claude with the
+  Anthropic **web_search + web_fetch** server tools to research a place across
+  forums, local blogs and review sites (in the local language too) and returns a
+  structured guide of real, named, review-backed places. The site then grounds
+  each one through Google Places. This route can run for a while (multiple
+  searches), so it sets `maxDuration: 300`; on Vercel Hobby, raise the plan or
+  lower it if needed. **Cost note:** each research call spends Claude tokens plus
+  web-search usage, so the site caches the result on the trip and only re-runs on
+  a new destination or a manual "Re-research".
 
 ## Deploy
 

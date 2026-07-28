@@ -59,10 +59,11 @@ function poolKey(title: string): string {
 
 /**
  * Dedupe a pool by normalized title, keeping the richest source. Priority:
- * places (live, rated) > signature (curated) > ai > custom > template.
+ * research (AI + verified) > places (live, rated) > signature > ai > custom > template.
  */
 export function dedupePool(items: RecommendationItem[]): RecommendationItem[] {
   const rank: Record<RecommendationItem['source'], number> = {
+    research: 6,
     places: 5,
     signature: 4,
     ai: 3,

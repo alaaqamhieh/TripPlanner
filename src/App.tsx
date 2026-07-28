@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { findLivePlaces } from './engine/liveQueries'
-import { buildGuide } from './engine/mustDo'
+import { buildGuide, buildGuideAI } from './engine/mustDo'
+import { researchAvailable } from './research'
 import { rankRecommendations } from './engine/recommend'
 import { scaffoldItinerary } from './engine/scaffold'
 import { scheduledRefIds } from './tripUtils'
@@ -234,7 +235,13 @@ export default function App() {
       }
       const profile = trip.profile
       setResearching(true)
-      void buildGuide(profile, dest)
+      // Prefer the AI + web-search deep research when it's switched on; fall
+      // back to the Google-Places-only guide (and again if research yields nothing).
+      const run = researchAvailable()
+        ? buildGuideAI(profile, dest).then((r) => (r.sections.length ? r : buildGuide(profile, dest)))
+        : buildGuide(profile, dest)
+      void run
+        .catch(() => buildGuide(profile, dest))
         .then((result) => {
           if (!result.sections.length) {
             if (opts?.manual) showToast('Couldn’t find enough top spots — try the map search below')

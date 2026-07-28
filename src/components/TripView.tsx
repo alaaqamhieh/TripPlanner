@@ -11,6 +11,7 @@ import ItemModal from './ItemModal'
 import Itinerary from './Itinerary'
 import MustDoGuide from './MustDoGuide'
 import PlaceDeck from './PlaceDeck'
+import PlaceSheet from './PlaceSheet'
 import PlacePhoto from './PlacePhoto'
 import Recommendations from './Recommendations'
 import TripMap from './TripMap'
@@ -26,6 +27,7 @@ type ModalState =
   | { kind: 'newItem'; date?: string }
   | { kind: 'editItem'; itemId: string }
   | { kind: 'settings' }
+  | { kind: 'place'; recId: string }
 
 export default function TripView({
   trip,
@@ -126,7 +128,7 @@ export default function TripView({
       (r) =>
         !seen.has(r.id) &&
         !scheduledRefs.has(r.id) &&
-        (r.source === 'signature' || r.source === 'places' || r.source === 'ai' || Boolean(r.photo)),
+        (r.source === 'signature' || r.source === 'places' || r.source === 'ai' || r.source === 'research' || Boolean(r.photo)),
     )
     const ranked = rankRecommendations(real, trip.profile, [], new Set())
     return ranked.map((s) => s.rec)
@@ -258,6 +260,7 @@ export default function TripView({
             shortlistPlace(recId)
             showToast('❤️ Added to your shortlist')
           }}
+          onOpen={(recId) => setModal({ kind: 'place', recId })}
           onResearch={onResearch ?? (() => {})}
           researching={researching ?? false}
           placesAvailable={placesAvailable ?? false}
@@ -314,6 +317,7 @@ export default function TripView({
           onImport={(rec) => updateTrip((prev) => ({ ...prev, pool: [...prev.pool, rec] }))}
           onPlan={(recId) => setModal({ kind: 'addToDay', recId })}
           onShortlist={shortlistPlace}
+          onOpen={(recId) => setModal({ kind: 'place', recId })}
         />
       </main>
 
@@ -343,6 +347,25 @@ export default function TripView({
         />
       )}
 
+      {modal.kind === 'place' &&
+        (() => {
+          const rec = trip.pool.find((r) => r.id === (modal as { recId: string }).recId)
+          if (!rec) return null
+          return (
+            <PlaceSheet
+              rec={rec}
+              destination={trip.meta.destination}
+              planned={scheduledRefIds(trip).has(rec.id)}
+              shortlisted={trip.shortlist.includes(rec.id)}
+              onPlan={() => setModal({ kind: 'addToDay', recId: rec.id })}
+              onShortlist={() => {
+                shortlistPlace(rec.id)
+                showToast('❤️ Added to your shortlist')
+              }}
+              onClose={close}
+            />
+          )
+        })()}
       {modal.kind === 'addToDay' && <AddToDayModal trip={trip} recId={modal.recId} onAdd={schedule} onClose={close} />}
       {(modal.kind === 'newItem' || modal.kind === 'editItem') && (
         <ItemModal
