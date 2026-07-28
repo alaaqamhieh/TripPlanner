@@ -75,7 +75,6 @@ export function SingleChoice<V extends string | number>({
           onClick={() => onPick(opt.value)}
         >
           <span className="opt-key" aria-hidden="true">{keyOf(i)}</span>
-          <span className="opt-emoji">{opt.emoji}</span>
           <span className="opt-body">
             <span className="opt-label">{opt.label}</span>
             {opt.hint && <span className="opt-hint">{opt.hint}</span>}
@@ -129,7 +128,6 @@ export function MultiChoice({
         return (
           <button key={opt.value} className={`opt-card${on ? ' on' : ''}`} onClick={() => onToggle(opt.value)}>
             <span className="opt-key" aria-hidden="true">{keyOf(i)}</span>
-            <span className="opt-emoji">{opt.emoji}</span>
             <span className="opt-body">
               <span className="opt-label">{opt.label}</span>
               {opt.hint && <span className="opt-hint">{opt.hint}</span>}

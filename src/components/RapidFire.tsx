@@ -53,18 +53,17 @@ export default function RapidFire({
         className={`rf-card${leaving ? ` out-${leaving}` : ''}`}
         style={{ ['--rf-accent' as string]: accent }}
       >
-        <span className="rf-emoji">{card.emoji}</span>
         <p className="rf-q">{card.question}</p>
       </div>
       <div className="rf-actions">
         <button className="rf-btn nah" onClick={() => answer('nah')}>
-          🙅 Not for me
+          Not for me
         </button>
         <button className="rf-btn like" onClick={() => answer('like')}>
-          🙂 Could be nice
+          Could be nice
         </button>
         <button className="rf-btn love" onClick={() => answer('love')}>
-          ❤️ Love it
+          Love it
         </button>
       </div>
     </div>

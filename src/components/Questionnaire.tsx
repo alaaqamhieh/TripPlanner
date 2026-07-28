@@ -54,7 +54,7 @@ const BUILD_LINES = [
   'Reading your answers…',
   'Matching ideas to your style…',
   'Sketching your days…',
-  'Packing your suggestions 🎒',
+  'Packing your suggestions',
 ]
 
 export default function Questionnaire({
@@ -179,8 +179,8 @@ export default function Questionnaire({
     return (
       <div className="quiz">
         <div className="quiz-build">
-          <div className="quiz-build-emoji">🧭</div>
-          <h2 className="quiz-title">Building your trip ✨</h2>
+          <div className="quiz-build-spinner" aria-hidden="true" />
+          <h2 className="quiz-title">Building your trip</h2>
           <div className="quiz-build-lines">
             {BUILD_LINES.map((line, i) => (
               <span key={line} style={{ animationDelay: `${i * 0.42}s` }}>
@@ -200,14 +200,14 @@ export default function Questionnaire({
         <StepFrame kicker="One last thing" title="Your plan — rebuild it or keep it?" sub="Your suggestions will refresh either way. Your custom additions are always kept.">
           <div className="opt-grid">
             <button className="opt-card" onClick={() => finish(true)}>
-              <span className="opt-emoji">🔄</span>
+              <span className="opt-key" aria-hidden="true">A</span>
               <span className="opt-body">
                 <span className="opt-label">Rebuild my day-by-day plan</span>
                 <span className="opt-hint">Start fresh from my new answers (replaces the current plan)</span>
               </span>
             </button>
             <button className="opt-card" onClick={() => finish(false)}>
-              <span className="opt-emoji">🤲</span>
+              <span className="opt-key" aria-hidden="true">B</span>
               <span className="opt-body">
                 <span className="opt-label">Keep my itinerary</span>
                 <span className="opt-hint">Just refresh the suggestions to match my new answers</span>
@@ -240,7 +240,7 @@ export default function Questionnaire({
                 className={`chip${draft.destination === s.label ? ' on' : ''}`}
                 onClick={() => set({ destination: s.label })}
               >
-                {s.emoji} {s.label.split(',')[0]}
+                {s.label.split(',')[0]}
               </button>
             ))}
           </div>
@@ -305,7 +305,7 @@ export default function Questionnaire({
 
       {stepId === 'interests' && (
         <StepFrame
-          kicker="Quick round ⚡"
+          kicker="Quick round"
           title="Is this you?"
           sub="Gut answers only — the deck below counts itself. This is how we learn what your trip should feel like."
         >
